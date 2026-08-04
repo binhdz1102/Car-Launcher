@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Car Launcher</string>
+    <string name="launcher_status">Launcher is running</string>
+</resources>
