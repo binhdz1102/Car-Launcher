@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="LauncherMediaButton">
+        <item name="android:layout_width">72dp</item>
+        <item name="android:layout_height">72dp</item>
+        <item name="android:background">@drawable/launcher_circle_button</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:textColor">@color/launcher_text_primary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="LauncherMediaPlayButton" parent="LauncherMediaButton">
+        <item name="android:layout_width">150dp</item>
+        <item name="android:background">@drawable/launcher_play_button</item>
+        <item name="android:textColor">@color/launcher_surface</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="LauncherActionButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:background">@drawable/launcher_button</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingHorizontal">20dp</item>
+        <item name="android:textColor">@color/launcher_text_primary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="LauncherNavigationTile" parent="LauncherActionButton">
+        <item name="android:layout_width">180dp</item>
+        <item name="android:layout_height">180dp</item>
+        <item name="android:background">@drawable/launcher_navigation_tile</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+</resources>

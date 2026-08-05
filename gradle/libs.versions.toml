@@ -20,6 +20,7 @@ carApp = "1.7.0"
 constraintlayout = "2.2.1"
 recyclerview = "1.4.0"
 viewpager2 = "1.1.0"
+datastore = "1.2.0"
 
 # Async, dependency injection, and persistence
 coroutines = "1.9.0"
@@ -67,6 +68,7 @@ androidx-car-app = { group = "androidx.car.app", name = "app", version.ref = "ca
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 androidx-viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 
 # Jetpack Compose. Library versions without version.ref are managed by the BOM.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }

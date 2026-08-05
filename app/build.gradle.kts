@@ -2,9 +2,16 @@ import java.util.Properties
 
 plugins {
     id("launcher.android.application")
-    id("launcher.android.navigation.compose")
     id("launcher.android.hilt")
 }
+
+val platformFrameworkJar = rootProject.file("../My-System-App/libs/platform/framework.jar")
+val systemUiSharedLibJar = rootProject.file(
+    "../../out-avd-car-mysystemapp/soong/.intermediates/frameworks/base/packages/SystemUI/shared/SystemUISharedLib/android_common/javac/SystemUISharedLib.jar",
+)
+val windowManagerShellAidlJar = rootProject.file(
+    "../../out-avd-car-mysystemapp/soong/.intermediates/frameworks/base/libs/WindowManager/Shell/WindowManager-Shell-aidls/android_common/javac/WindowManager-Shell-aidls.jar",
+)
 
 // These standalone projects are intentionally distributable without a .git
 // directory. Keep the field available without making Gradle depend on git.
@@ -60,12 +67,26 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:common"))
+    implementation(project(":core:ui"))
+    implementation(project(":feature:launcher:data"))
+    implementation(project(":feature:launcher:domain"))
+    implementation(project(":feature:launcher:presentation"))
+
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.material)
+    implementation(libs.androidx.recyclerview)
     implementation(libs.timber)
+
+    // QuickStep's binder contract is a platform shared library in the AOSP build. It is
+    // packaged into this standalone APK just as CarLauncher-core does in Soong.
+    implementation(files(systemUiSharedLibJar))
+    implementation(files(windowManagerShellAidlJar))
+    compileOnly(files(platformFrameworkJar))
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

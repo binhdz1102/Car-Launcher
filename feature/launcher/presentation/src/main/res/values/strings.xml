@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media_title">Media</string>
+    <string name="media_art_content_description">Album artwork</string>
+    <string name="media_previous">Previous</string>
+    <string name="media_play">Play</string>
+    <string name="media_pause">Pause</string>
+    <string name="media_next">Next</string>
+    <string name="media_source_button">Media sources</string>
+    <string name="open_media_center">Media center</string>
+    <string name="open_apps">Apps</string>
+    <string name="retry_navigation">Retry navigation</string>
+    <string name="task_loading">Loading embedded task…</string>
+    <string name="app_grid_title">Apps</string>
+    <string name="app_search_hint">Search applications</string>
+    <string name="app_grid_empty">No applications available</string>
+    <string name="navigation">Navigation</string>
+    <string name="close">Close</string>
+</resources>

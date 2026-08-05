@@ -1,6 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Privileged/system permissions used by the AOSP launcher contract and TaskView host. -->
+    <uses-permission android:name="android.car.permission.ACCESS_CAR_PROJECTION_STATUS" />
+    <uses-permission android:name="android.car.permission.CONTROL_CAR_APP_LAUNCH" />
+    <uses-permission android:name="android.permission.ACTIVITY_EMBEDDING" />
+    <uses-permission android:name="android.permission.CHANGE_COMPONENT_ENABLED_STATE" />
+    <uses-permission android:name="android.permission.START_TASKS_FROM_RECENTS" />
+    <uses-permission android:name="android.permission.CONTROL_INCALL_EXPERIENCE" />
+    <uses-permission android:name="android.permission.INJECT_EVENTS" />
+    <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW" />
+    <uses-permission android:name="android.permission.MANAGE_ACTIVITY_TASKS" />
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <uses-permission android:name="android.permission.REMOVE_TASKS" />
+    <uses-permission android:name="android.permission.GET_TASKS" />
+    <uses-permission android:name="android.permission.MANAGE_USERS" />
+    <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.MONITOR_INPUT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.ACCESS_VOICE_INTERACTION_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES" />
+    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
+    <uses-permission android:name="android.car.permission.MANAGE_CAR_SYSTEM_UI" />
+    <uses-permission android:name="android.car.permission.CAR_EXTERIOR_ENVIRONMENT" />
+    <uses-permission android:name="android.car.permission.CONTROL_CAR_CLIMATE" />
+    <uses-permission android:name="android.car.permission.CAR_MONITOR_CLUSTER_NAVIGATION_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.BIND_APPWIDGET" />
+
+    <queries>
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
+    </queries>
+
     <application
         android:name=".CarLauncherApplication"
         android:allowBackup="false"
@@ -12,14 +50,16 @@
 
         <activity
             android:name=".CarLauncher"
+            android:configChanges="uiMode|mcc|mnc|orientation|screenSize|smallestScreenSize|density"
+            android:clearTaskOnLaunch="true"
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTask"
+            android:resizeableActivity="true"
             android:resumeWhilePausing="true"
             android:stateNotNeeded="true"
-            android:clearTaskOnLaunch="true"
-            android:theme="@style/Theme.CarLauncher">
-
+            android:theme="@style/Theme.CarLauncher"
+            android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
@@ -27,12 +67,48 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER_APP" />
             </intent-filter>
-
-            <meta-data
-                android:name="distractionOptimized"
+            <meta-data android:name="distractionOptimized" android:value="true" />
+            <property
+                android:name="android.window.ALLOW_HOME_ACTIVITY_ALWAYS_PRESENT"
                 android:value="true" />
         </activity>
 
-    </application>
+        <activity
+            android:name="com.android.car.carlauncher.feature.launcher.presentation.AppGridActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.CarLauncher.AppGrid">
+            <intent-filter>
+                <action android:name="com.android.car.carlauncher.ACTION_APP_GRID" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
+        </activity>
 
+        <activity
+            android:name=".recents.CarRecentsActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleInstance"
+            android:stateNotNeeded="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.CarLauncher.Recents">
+            <intent-filter>
+                <action android:name="com.android.car.carlauncher.recents.OPEN_RECENT_TASK_ACTION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
+        </activity>
+
+        <service
+            android:name=".recents.CarQuickStepService"
+            android:directBootAware="true"
+            android:exported="true"
+            android:permission="android.permission.STATUS_BAR_SERVICE">
+            <intent-filter>
+                <action android:name="android.intent.action.QUICKSTEP_SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
 </manifest>

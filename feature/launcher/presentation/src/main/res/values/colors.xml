@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="launcher_surface">#181D20</color>
+    <color name="launcher_card">#272D31</color>
+    <color name="launcher_card_high">#353C41</color>
+    <color name="launcher_task_surface">#42B46F</color>
+    <color name="launcher_task_overlay">#CC181D20</color>
+    <color name="launcher_text_primary">#EEF0F1</color>
+    <color name="launcher_text_secondary">#BEC4C8</color>
+    <color name="launcher_accent">#8BCDF4</color>
+    <color name="launcher_button_disabled">#566067</color>
+</resources>

@@ -1,69 +1,41 @@
 package com.android.car.carlauncher
 
+import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.android.car.carlauncher.ui.theme.CarLauncherTheme
+import android.os.Process
+import androidx.appcompat.app.AppCompatActivity
+import com.android.car.carlauncher.feature.launcher.presentation.LauncherFragment
+import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 
-/**
- * Small Gradle-built HOME application used for rapid development on the AAOS
- * emulator. The production AOSP CarLauncher remains a Soong application and
- * is intentionally not copied into this standalone project.
- */
-class CarLauncher : ComponentActivity() {
+/** HOME entry point. Feature state and TaskView boundaries live in launcher:presentation. */
+@AndroidEntryPoint
+class CarLauncher : AppCompatActivity() {
+    private val launcherFragmentTag = "launcher-root"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Timber.d("onCreate()")
-        setContent {
-            CarLauncherTheme {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
-                    Text(stringResource(R.string.launcher_status))
-                }
-            }
+        setContentView(R.layout.activity_launcher_host)
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.launcher_container, LauncherFragment(), launcherFragmentTag)
+                .commitNow()
         }
+        Timber.tag(TAG).i("CarLauncher created for uid=%d", Process.myUid())
+        fragment()?.handleHostIntent(intent)
     }
 
-    override fun onStart() {
-        super.onStart()
-        Timber.d("onStart()")
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        fragment()?.handleHostIntent(intent)
+        Timber.tag(TAG).d("Received new launcher intent: %s", intent.action)
     }
 
-    override fun onRestart() {
-        super.onRestart()
-        Timber.d("onRestart()")
-    }
+    private fun fragment(): LauncherFragment? =
+        supportFragmentManager.findFragmentByTag(launcherFragmentTag) as? LauncherFragment
 
-    override fun onResume() {
-        super.onResume()
-        Timber.d("onResume()")
-    }
-
-    override fun onPause() {
-        Timber.d("onPause()")
-        super.onPause()
-    }
-
-    override fun onStop() {
-        Timber.d("onStop()")
-        super.onStop()
-    }
-
-    override fun onDestroy() {
-        Timber.d("onDestroy()")
-        super.onDestroy()
+    private companion object {
+        const val TAG = "CarLauncher"
     }
 }

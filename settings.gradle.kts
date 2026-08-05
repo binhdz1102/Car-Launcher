@@ -25,4 +25,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "CarLauncher"
 include(":app")
+include(":core:common")
+include(":core:ui")
+include(":feature:launcher:domain")
+include(":feature:launcher:data")
+include(":feature:launcher:presentation")
  
