@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Car Launcher</string>
+    <string name="recents_title">Recent tasks</string>
+    <string name="recents_empty">No recent tasks</string>
+    <string name="recents_clear_all">Clear all</string>
+    <string name="calm_mode_title">Calm mode</string>
+    <string name="calm_mode_close">Close calm mode</string>
+    <string name="map_fallback_message">Navigation is not available until a map app is configured.</string>
+    <string name="widget_empty">No launcher widgets are configured.</string>
+    <string name="reset_appgrid_title">Reset app grid to A-Z order</string>
+    <string name="reset_appgrid_dialogue_message">This will remove all custom ordering. Do you want to continue?</string>
 </resources>

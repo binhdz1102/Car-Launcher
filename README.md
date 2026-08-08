@@ -1,131 +1,163 @@
 # Car-Launcher
 
-`Car-Launcher` is a standalone, Gradle-built replacement for the AAOS
-`com.android.car.carlauncher` system application. It keeps the AOSP launcher
-contracts used by the automotive image while making the application practical
-to iterate on from Android Studio.
+Car-Launcher is a standalone, Gradle-built replacement for the AAOS package
+com.android.car.carlauncher. It keeps the public component, permission, signing,
+HOME, SystemUI, QuickStep, widget and Settings contracts used by the matching
+AOSP Automotive image while using a modern multi-module implementation.
 
-The implementation is based on the current AOSP `packages/apps/Car/Launcher`
-behavior and the Launcher-related work in `custom-system-apps/My-System-App`.
-The UI is XML-based, including the home screen, media pane, embedded-task pane,
-app grid, and recents surface.
+For the exact development AVD documented below, the result is ready to replace
+the prebuilt launcher through an APK update. This is a runtime compatibility
+statement for that image, not a claim of pixel-identical UI across every OEM
+overlay.
 
-## What is included
+## Replacement status
 
-- Automotive HOME activity with the AOSP launcher component name.
-- Media card backed by `CarMediaManager` and `MediaSessionManager`.
-- Navigation and application embedding through
-  `ControlledRemoteCarTaskView`.
-- XML application grid with LauncherApps discovery, search, Navigation tile,
-  distraction-optimization filtering, and user-specific ordering persisted with
-  DataStore.
-- XML recents activity and a QuickStep binder service compatible with the
-  platform SystemUI shared contract.
-- Hilt dependency injection, ViewModel state holders, Kotlin Coroutines and
-  Flow, Timber logging, and a domain state machine with unit tests.
+The stock APK manifest and the SystemUI overlay on the target image were audited.
+The replacement publishes every launcher-owned component consumed by that image:
 
-See the function descriptions in [English](docs/FUNCTIONS_EN.md) and
-[Vietnamese](docs/FUNCTIONS_VI.md). The real-device verification is recorded in
-the [English report](docs/TEST_REPORT_EN.md) and [Vietnamese report](docs/TEST_REPORT_VI.md).
+| Platform contract | Replacement |
+| --- | --- |
+| HOME / SECONDARY_HOME | CarLauncher |
+| App drawer action and stock explicit component | AppGridActivity plus the .AppGridActivity compatibility alias |
+| Overview / recents | CarRecentsActivity and CarQuickStepService |
+| Launcher control/widget surface | ControlBarActivity and WidgetHostActivity |
+| Calm Mode Quick Control | CalmModeQCProvider and CalmModeActivity |
+| Map fallback | MapTosActivity |
+| Telecom binding | InCallServiceImpl |
+| Date widget | DateAppWidgetProvider |
+| Automotive Settings reset entry | ResetLauncherActivity |
 
-## Module structure
+The implementation covers:
 
-```text
-app/
-  CarLauncher, CarRecentsActivity, CarQuickStepService, app resources
-core/
-  common       shared coroutine dispatchers
-  ui           XML-oriented car UI helpers and tokens
-feature/launcher/
-  domain      models, repository contracts, pane state machine, unit tests
-  data        LauncherApps, Car UX, media, DataStore implementations
-  presentation ViewModels, XML fragments/activities, TaskView host, adapters
-build-logic/  convention plugins for application, library, feature, Hilt, etc.
-```
+- XML HOME surface with reconnecting media and embedded map/application panes;
+- CarMediaManager and MediaSessionManager source/session observation, playback,
+  seek, previous/next, source switching and Media Center launch;
+- ControlledRemoteCarTaskView lifecycle and recovery;
+- LauncherApps-based application discovery, media-service tiles, search,
+  persisted drag ordering and reset-to-A-Z;
+- fail-safe Car UX restrictions, including disabled non-DO apps and removal of
+  keyboard/reorder operations while driving;
+- platform task snapshots, open/remove/clear recents and the SystemUI QuickStep
+  binder;
+- SystemUI App Grid and Calm Mode QC integration;
+- system-window insets, user/display-aware routing and secondary-display layout.
 
-The dependency direction is `presentation -> domain`, `data -> domain`, and
-the application assembles the feature. Android and AAOS APIs are kept at the
-outer data/presentation boundaries. The simple launcher ordering state uses
-DataStore; Room would add no value for the current data model. AndroidX
-Navigation is not forced into the two entry surfaces because the AOSP launcher
-contract is activity/action based and the embedded pane is a state machine.
+## Architecture
+
+The dependency direction is presentation -> domain and data -> domain:
+
+~~~text
+app/                         platform entry points and compatibility components
+core/common/                 shared Car service connection and dispatching
+core/ui/                     insets and reusable XML UI helpers
+feature/launcher/domain/     immutable models, repository contracts, state machine
+feature/launcher/data/       Car, LauncherApps, media, recents and DataStore adapters
+feature/launcher/presentation/ ViewModels, activities/fragments and RecyclerView adapters
+build-logic/                 shared Gradle convention plugins
+~~~
+
+Hilt, ViewModel, Coroutines/Flow, lifecycle-aware collection, DataStore,
+DiffUtil and explicit state machines are used at their appropriate boundaries.
+Room and an AndroidX navigation graph are intentionally absent: the only
+persistent model is a small ordered list, and AAOS enters the feature through
+fixed actions/components rather than an in-app navigation graph.
+
+Build settings are Java/Kotlin 17, minSdk 34, compileSdk 36 and targetSdk 36.
+The implementation is verified on Android 17/API 37.
 
 ## Build
 
-From this directory:
+The standalone build uses platform artifacts from this AOSP workspace:
 
-```bash
-bash ./gradlew testDebugUnitTest :app:assembleDebug --console=plain --max-workers=2
-```
+- ../My-System-App/libs/platform/android.car.jar
+- ../My-System-App/libs/platform/framework.jar
+- SystemUISharedLib and WindowManager Shell JARs under
+  ../../out-avd-car-mysystemapp/soong
+- car-qc-lib from the same Soong output
 
-The standalone build expects these existing workspace artifacts:
+Run the complete local quality gate:
 
-- `../My-System-App/libs/platform/android.car.jar`
-- `../My-System-App/libs/platform/framework.jar`
-- `../../out-avd-car-mysystemapp/soong/.../SystemUISharedLib.jar`
-- `../../out-avd-car-mysystemapp/soong/.../WindowManager-Shell-aidls.jar`
+~~~bash
+bash ./gradlew   ktlintCheck detekt lintDebug testDebugUnitTest   :app:assembleDebug :app:assembleRelease   --console=plain --max-workers=2
+~~~
 
-The debug APK is signed with the development platform certificate in
-`keystore/platform.p12`. This key is only for the matching development image,
-not for a production device.
+Run the component contract tests on a booted AVD:
 
-## Install and launch on the development AVD
+~~~bash
+bash ./gradlew :app:connectedDebugAndroidTest   --console=plain --max-workers=2
+~~~
 
-```bash
-adb -s emulator-5554 install -r -d app/build/outputs/apk/debug/app-debug.apk
-adb -s emulator-5554 shell am start -W \
-  -a android.intent.action.MAIN \
-  -c android.intent.category.HOME \
-  -n com.android.car.carlauncher/.CarLauncher
-```
+The connected test task temporarily installs and then removes the target APK.
+Run the installation script again afterward so the custom update remains active.
 
-The application uses the same package and launcher component as AOSP, so an
-`adb install -r -d` update replaces the active package for the current user
-without changing the system image. Confirm the expected platform certificate
-with:
+## Install over the prebuilt AVD launcher
 
-```bash
-adb -s emulator-5554 shell dumpsys package com.android.car.carlauncher
-```
+The retained installation workflow is:
 
-Expected certificate SHA-256:
+~~~bash
+bash scripts/install-avd.sh emulator-5554
+~~~
 
-```text
+The script builds the debug APK when missing, performs adb install -r, verifies
+that the active package comes from /data/app with versionCode 1000, force-stops
+the package and starts its HOME activity. No downgrade flag is needed because
+1000 is greater than the image launcher versionCode 37.
+
+An explicit APK path can be supplied as the second argument:
+
+~~~bash
+bash scripts/install-avd.sh emulator-5554   app/build/outputs/apk/release/app-release.apk
+~~~
+
+The equivalent manual command is:
+
+~~~bash
+adb -s emulator-5554 install -r   app/build/outputs/apk/debug/app-debug.apk
+~~~
+
+Both debug and release variants use the development image's platform
+certificate. Expected certificate SHA-256:
+
+~~~text
 c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8
-```
+~~~
 
-Open the app grid directly:
+Useful checks:
 
-```bash
-adb -s emulator-5554 shell am start -W \
-  -a com.android.car.carlauncher.ACTION_APP_GRID \
-  -p com.android.car.carlauncher
-```
+~~~bash
+adb -s emulator-5554 shell pm path com.android.car.carlauncher
+adb -s emulator-5554 shell dumpsys package com.android.car.carlauncher
+adb -s emulator-5554 shell cmd package resolve-activity --brief   -a android.intent.action.MAIN -c android.intent.category.HOME
+~~~
 
-Open recents directly:
+## Direct entry points
 
-```bash
-adb -s emulator-5554 shell am start -W \
-  -a com.android.car.carlauncher.recents.OPEN_RECENT_TASK_ACTION \
-  -n com.android.car.carlauncher/.recents.CarRecentsActivity
-```
+~~~bash
+adb -s emulator-5554 shell am start -W   -a com.android.car.carlauncher.ACTION_APP_GRID   -p com.android.car.carlauncher
 
-## TaskView prerequisite
+adb -s emulator-5554 shell input keyevent KEYCODE_APP_SWITCH
 
-The embedding API requires the automotive `CarSystemUIProxy` to be registered
-by CarSystemUI. The current AVD uses the custom `Car-System-UI` application,
-which reports `CarSystemUIProxy registered: false`; therefore the launcher
-shows a bounded `TaskView unavailable` error on that image. This is an image
-integration limitation, not a reason to silently claim TaskView success. With
-the standard AOSP CarSystemUI proxy enabled, the same host creates and manages
-the controlled remote task view.
+adb -s emulator-5554 shell am start -W   -n com.android.car.carlauncher/.ResetLauncherActivity
+~~~
+
+## Verification scope
+
+Direct AVD results, including UXR injection, SystemUI integration, TaskView,
+recents snapshots, reset ordering and the secondary-display check, are recorded
+in [the English test report](docs/TEST_REPORT_EN.md) and
+[the Vietnamese test report](docs/TEST_REPORT_VI.md).
+
+The exact AVD only exposes one physical occupant display. A trusted 1280x720
+overlay display verified display routing and responsive layout, but it is not a
+substitute for an end-to-end passenger occupant-zone test on multi-display
+hardware. OEM-specific assistive/weather cards and pixel-level DEWD styling are
+also product UI choices, not missing contracts on this AVD.
 
 ## Restore the image package
 
-Only use this when the development APK should be removed from the current user:
+To replace the development update with the original matching APK:
 
-```bash
-adb -s emulator-5554 install -r -d \
-  "/home/binh/Desktop/aosp/custom-system-apps/original system apks/CarLauncher.apk"
+~~~bash
+adb -s emulator-5554 install -r -d   "/home/binh/Desktop/aosp/custom-system-apps/original system apks/CarLauncher.apk"
 adb -s emulator-5554 shell am force-stop com.android.car.carlauncher
-```
+~~~

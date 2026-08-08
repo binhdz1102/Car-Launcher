@@ -15,6 +15,8 @@ import androidx.annotation.Nullable;
 
 import com.android.systemui.shared.recents.ILauncherProxy;
 import com.android.systemui.shared.statusbar.phone.BarTransitions;
+import com.android.wm.shell.recents.IRecentTasks;
+import com.android.car.carlauncher.feature.launcher.data.RecentTasksSession;
 
 /** Bridges CarSystemUI's QuickStep binder callbacks to the XML recents Activity. */
 public class CarQuickStepService extends Service {
@@ -36,11 +38,18 @@ public class CarQuickStepService extends Service {
         return new CarLauncherProxyBinder();
     }
 
+    @Override
+    public boolean onUnbind(Intent intent) {
+        RecentTasksSession.INSTANCE.terminate();
+        return false;
+    }
+
     private boolean isRecentsActivityShown() {
         return mActivityManager.getAppTasks().stream()
+                .filter(appTask -> appTask.getTaskInfo().isVisible())
                 .map(appTask -> appTask.getTaskInfo().topActivity)
                 .anyMatch(component -> component != null
-                        && mRecentsComponent.getClassName().equals(component.getClassName()));
+                        && mRecentsComponent.equals(component));
     }
 
     private void toggleRecents(boolean closeRecents) {
@@ -55,7 +64,13 @@ public class CarQuickStepService extends Service {
         public void onActiveNavBarRegionChanges(Region activeRegion) {}
 
         @Override
-        public void onInitialize(Bundle params) {}
+        public void onInitialize(Bundle params) {
+            if (params == null) {
+                RecentTasksSession.INSTANCE.terminate();
+                return;
+            }
+            RecentTasksSession.INSTANCE.initialize(params.getBinder(IRecentTasks.DESCRIPTOR));
+        }
 
         @Override
         public void onOverviewToggle() {

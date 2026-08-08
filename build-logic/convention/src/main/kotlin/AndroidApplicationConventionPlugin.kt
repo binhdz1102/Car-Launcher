@@ -3,6 +3,8 @@ import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 class AndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
@@ -15,7 +17,8 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             compileSdk = 36
 
             defaultConfig {
-                minSdk = 26
+                // Calm-mode background launches use the explicit Android 14 ActivityOptions API.
+                minSdk = 34
                 targetSdk = 36
                 testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 vectorDrawables.useSupportLibrary = true
@@ -35,6 +38,10 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                     excludes += "/META-INF/{AL2.0,LGPL2.1}"
                 }
             }
+        }
+
+        extensions.configure<KotlinAndroidProjectExtension> {
+            compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
         }
     }
 }

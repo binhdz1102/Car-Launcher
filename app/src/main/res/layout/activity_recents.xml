@@ -2,14 +2,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/launcher_surface"
     android:orientation="vertical"
     android:padding="32dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Recent tasks"
+        android:text="@string/recents_title"
         android:textColor="@color/launcher_text_primary"
         android:textSize="32sp"
         android:textStyle="bold" />
@@ -20,7 +19,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="No recent tasks"
+        android:text="@string/recents_empty"
         android:textColor="@color/launcher_text_secondary"
         android:textSize="20sp"
         android:visibility="gone" />
@@ -41,7 +40,7 @@
         android:clickable="true"
         android:focusable="true"
         android:gravity="center"
-        android:text="Clear all"
+        android:text="@string/recents_clear_all"
         android:textColor="@color/launcher_text_primary"
         android:textSize="17sp" />
 </LinearLayout>

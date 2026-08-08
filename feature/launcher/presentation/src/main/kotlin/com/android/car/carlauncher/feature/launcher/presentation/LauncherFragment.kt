@@ -10,6 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.android.car.carlauncher.core.common.CarServiceConnection
 import com.android.car.carlauncher.core.ui.CarUi
 import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTaskState
 import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback
@@ -17,21 +18,29 @@ import com.android.car.carlauncher.feature.launcher.domain.MediaSource
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class LauncherFragment : Fragment(R.layout.fragment_launcher) {
+    @Inject lateinit var carConnection: CarServiceConnection
+
     private val viewModel: LauncherViewModel by viewModels()
     private var taskHost: EmbeddedTaskHost? = null
     private var loadedComponent: String? = null
     private var progressFromUser = false
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?,
+    ) {
         super.onViewCreated(view, savedInstanceState)
-        val host = AndroidEmbeddedTaskHost(
-            activity = requireActivity(),
-            onTaskAppeared = viewModel::onTaskAppeared,
-            onError = viewModel::onEmbeddedFailure,
-        )
+        val host =
+            AndroidEmbeddedTaskHost(
+                activity = requireActivity(),
+                carConnection = carConnection,
+                onTaskAppeared = viewModel::onTaskAppeared,
+                onError = viewModel::onEmbeddedFailure,
+            )
         taskHost = host
         view.findViewById<android.widget.FrameLayout>(R.id.task_view_container).addView(host.view)
 
@@ -52,6 +61,7 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
     }
 
     fun handleHostIntent(intent: Intent?) {
+        taskHost?.onHostNewIntent()
         viewModel.handleHostIntent(intent)
     }
 
@@ -66,16 +76,20 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
             taskHost?.restoreAfterHostInteraction()
         }
         view.findViewById<View>(R.id.media_previous).setOnClickListener {
-            viewModel.previous(); hostInteraction()
+            viewModel.handleMediaAction(LauncherMediaAction.Previous)
+            hostInteraction()
         }
         view.findViewById<View>(R.id.media_play_pause).setOnClickListener {
-            viewModel.playPause(); hostInteraction()
+            viewModel.handleMediaAction(LauncherMediaAction.PlayPause)
+            hostInteraction()
         }
         view.findViewById<View>(R.id.media_next).setOnClickListener {
-            viewModel.next(); hostInteraction()
+            viewModel.handleMediaAction(LauncherMediaAction.Next)
+            hostInteraction()
         }
         view.findViewById<View>(R.id.media_center).setOnClickListener {
-            viewModel.openMediaCenter(); hostInteraction()
+            viewModel.handleMediaAction(LauncherMediaAction.OpenCenter)
+            hostInteraction()
         }
         view.findViewById<View>(R.id.media_source_button).setOnClickListener {
             val state = viewModel.uiState.value
@@ -97,7 +111,9 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
 
                 override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {
                     if (progressFromUser) {
-                        viewModel.seekTo(seekBar?.progress?.toLong() ?: 0L)
+                        viewModel.handleMediaAction(
+                            LauncherMediaAction.Seek(seekBar?.progress?.toLong() ?: 0L),
+                        )
                         hostInteraction()
                     }
                     progressFromUser = false
@@ -106,7 +122,10 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         )
     }
 
-    private fun render(view: View, state: LauncherUiState) {
+    private fun render(
+        view: View,
+        state: LauncherUiState,
+    ) {
         if (state.currentTarget == null && state.taskState is EmbeddedTaskState.Error) {
             loadedComponent = null
         }
@@ -129,15 +148,22 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         renderMedia(view, state.media)
     }
 
-    private fun renderMedia(view: View, playback: MediaPlayback) {
-        view.findViewById<android.widget.TextView>(R.id.media_source).text = playback.sourceLabel
-        view.findViewById<android.widget.TextView>(R.id.media_title).text = playback.title
-        view.findViewById<android.widget.TextView>(R.id.media_artist).text = playback.artist
+    private fun renderMedia(
+        view: View,
+        playback: MediaPlayback,
+    ) {
+        view.findViewById<android.widget.TextView>(R.id.media_source).text =
+            playback.sourceLabel.ifBlank { getString(R.string.media_no_source) }
+        view.findViewById<android.widget.TextView>(R.id.media_title).text =
+            playback.title.ifBlank { getString(R.string.media_nothing_playing) }
+        view.findViewById<android.widget.TextView>(R.id.media_artist).text =
+            playback.artist.ifBlank { getString(R.string.media_choose_source) }
         view.findViewById<android.widget.ImageView>(R.id.media_art).setImageBitmap(
             playback.artworkBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) },
         )
         if (playback.artworkBytes == null) {
-            view.findViewById<android.widget.ImageView>(R.id.media_art)
+            view
+                .findViewById<android.widget.ImageView>(R.id.media_art)
                 .setImageResource(R.drawable.ic_media_note)
         }
         val progress = view.findViewById<android.widget.SeekBar>(R.id.media_progress)
@@ -152,7 +178,7 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         view.findViewById<android.widget.TextView>(R.id.media_play_pause).text =
             if (playback.isPlaying) getString(R.string.media_pause) else getString(R.string.media_play)
         view.findViewById<View>(R.id.media_source_button).isEnabled = true
-        view.findViewById<View>(R.id.media_center).isEnabled = playback.sourcePackage != null
+        view.findViewById<View>(R.id.media_center).isEnabled = playback.sourceComponent != null
     }
 
     private fun showMediaSources(
@@ -161,16 +187,19 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         hostInteraction: () -> Unit,
     ) {
         if (sources.isEmpty()) return
-        PopupMenu(requireContext(), view.findViewById(R.id.media_source_button)).apply {
-            sources.forEachIndexed { index, source ->
-                menu.add(0, index, index, source.label)
-            }
-            setOnMenuItemClickListener { item ->
-                sources.getOrNull(item.itemId)?.let(viewModel::selectSource)
-                hostInteraction()
-                true
-            }
-        }.show()
+        PopupMenu(requireContext(), view.findViewById(R.id.media_source_button))
+            .apply {
+                sources.forEachIndexed { index, source ->
+                    menu.add(0, index, index, source.label)
+                }
+                setOnMenuItemClickListener { item ->
+                    sources.getOrNull(item.itemId)?.let { source ->
+                        viewModel.handleMediaAction(LauncherMediaAction.SelectSource(source))
+                    }
+                    hostInteraction()
+                    true
+                }
+            }.show()
     }
 
     private fun openAppGrid() {

@@ -19,16 +19,42 @@ data class LaunchableApp(
     val componentName: String,
     val packageName: String,
     val label: String,
+    val type: LaunchableAppType = LaunchableAppType.ACTIVITY,
     val isDistractionOptimized: Boolean,
     val isEnabled: Boolean,
-    val disabledReason: String? = null,
+    val disabledReason: LaunchableAppDisabledReason? = null,
+)
+
+enum class LaunchableAppType {
+    ACTIVITY,
+    MEDIA_SERVICE,
+}
+
+enum class LaunchableAppDisabledReason {
+    NOT_DISTRACTION_OPTIMIZED,
+    SAFETY_SERVICE_UNAVAILABLE,
+}
+
+data class LauncherRestrictions(
+    val requiresDistractionOptimization: Boolean = true,
+    val noKeyboard: Boolean = true,
+    val carServiceReady: Boolean = false,
 )
 
 sealed interface EmbeddedTaskState {
     data object Idle : EmbeddedTaskState
-    data class Loading(val target: EmbeddedAppTarget) : EmbeddedTaskState
-    data class Running(val target: EmbeddedAppTarget) : EmbeddedTaskState
-    data class Error(val error: EmbeddedTaskError) : EmbeddedTaskState
+
+    data class Loading(
+        val target: EmbeddedAppTarget,
+    ) : EmbeddedTaskState
+
+    data class Running(
+        val target: EmbeddedAppTarget,
+    ) : EmbeddedTaskState
+
+    data class Error(
+        val error: EmbeddedTaskError,
+    ) : EmbeddedTaskState
 }
 
 data class EmbeddedTaskError(
@@ -39,9 +65,10 @@ data class EmbeddedTaskError(
 
 data class MediaPlayback(
     val sourcePackage: String? = null,
-    val sourceLabel: String = "No media source",
-    val title: String = "Nothing playing",
-    val artist: String = "Choose a media source to begin",
+    val sourceComponent: String? = null,
+    val sourceLabel: String = "",
+    val title: String = "",
+    val artist: String = "",
     val artworkBytes: ByteArray? = null,
     val isPlaying: Boolean = false,
     val positionMs: Long = 0L,
@@ -60,4 +87,13 @@ data class MediaQueueItem(
     val id: Long,
     val title: String,
     val subtitle: String,
+)
+
+data class RecentTask(
+    val taskId: Int,
+    val componentName: String,
+    val packageName: String,
+    val label: String,
+    val thumbnailBytes: ByteArray? = null,
+    val isEnabled: Boolean = true,
 )

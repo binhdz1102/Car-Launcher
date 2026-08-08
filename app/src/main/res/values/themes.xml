@@ -3,6 +3,7 @@
 
     <style name="Theme.CarLauncher" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:fontFamily">sans</item>
+        <item name="android:windowBackground">@color/launcher_surface</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:statusBarColor">@color/launcher_surface</item>
         <item name="android:navigationBarColor">@color/launcher_surface</item>
@@ -11,4 +12,9 @@
 
     <style name="Theme.CarLauncher.AppGrid" parent="Theme.CarLauncher" />
     <style name="Theme.CarLauncher.Recents" parent="Theme.CarLauncher" />
+    <style name="Theme.CarLauncher.CalmMode" parent="Theme.CarLauncher">
+        <item name="android:windowBackground">@color/calm_surface</item>
+    </style>
+    <style name="Theme.CarLauncher.WidgetHost" parent="Theme.CarLauncher" />
+    <style name="Theme.CarLauncher.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert" />
 </resources>

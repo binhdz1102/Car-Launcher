@@ -8,6 +8,9 @@
     <string name="media_next">Next</string>
     <string name="media_source_button">Media sources</string>
     <string name="open_media_center">Media center</string>
+    <string name="media_no_source">No media source</string>
+    <string name="media_nothing_playing">Nothing playing</string>
+    <string name="media_choose_source">Choose a media source to begin</string>
     <string name="open_apps">Apps</string>
     <string name="retry_navigation">Retry navigation</string>
     <string name="task_loading">Loading embedded task…</string>
@@ -16,4 +19,7 @@
     <string name="app_grid_empty">No applications available</string>
     <string name="navigation">Navigation</string>
     <string name="close">Close</string>
+    <string name="app_disabled_not_distraction_optimized">Unavailable while driving.</string>
+    <string name="app_disabled_safety_service">Waiting for the vehicle safety service.</string>
+    <string name="recents_remove">Remove</string>
 </resources>

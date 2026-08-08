@@ -1,81 +1,133 @@
 # Chức năng của Car-Launcher
 
-## Màn hình HOME
+Tài liệu này mô tả chức năng của bản thay thế package
+com.android.car.carlauncher trên image AVD Automotive đã kiểm thử. Các component
+public của launcher gốc được giữ nguyên; phần triển khai nội bộ dùng kiến trúc
+multi-module hiện đại.
 
-`CarLauncher` là HOME activity được export và giữ nguyên package/component
-identity của launcher AOSP. Giao diện được viết bằng XML theo bố cục hai pane:
+## HOME và vòng đời dịch vụ xe
 
-- pane bên trái là thẻ media;
-- pane bên phải hiển thị navigation hoặc ứng dụng được chọn để embed;
-- system bar của Android Automotive nằm ngoài cửa sổ của app.
+CarLauncher xử lý MAIN, HOME, SECONDARY_HOME, DEFAULT và LAUNCHER_APP. Activity
+giữ singleTask, stateNotNeeded, resumeWhilePausing và contract
+ALLOW_HOME_ACTIVITY_ALWAYS_PRESENT tương đương launcher hệ thống.
 
-Launcher nhận HOME action chuẩn và intent trả về từ app grid. Activity dùng
-single-task để việc chọn app quay lại đúng instance HOME hiện có.
+HOME gồm thẻ media bên trái và vùng ứng dụng nhúng bên phải. Mọi cửa sổ tự áp
+system-bar insets để không bị status/navigation bar che. CarServiceConnection là
+kết nối dùng chung, không chặn main thread, phát trạng thái bằng StateFlow và tự
+kết nối lại khi dịch vụ xe chết hoặc sẵn sàng trở lại.
 
 ## Media
 
-Media repository kết hợp media source của xe và callback của media session thành
-các `StateFlow`. Thẻ XML hỗ trợ:
+MediaRepository kết hợp CarMediaManager, MediaSessionManager và callback
+MediaController. UI hỗ trợ:
 
-- tên source và popup chọn source;
-- title, artist, artwork, vị trí, thời lượng và seek bar;
-- previous, play/pause, next và media-center;
-- empty state rõ ràng khi chưa có media session hoạt động.
+- tự nối lại source và session hiện hành;
+- title, artist, artwork, vị trí và thời lượng;
+- previous, play/pause, next và seek;
+- danh sách/chuyển media source;
+- mở Media Center theo source;
+- empty state khi source không có metadata hoặc session.
 
-Các API callback của Android chỉ dùng executor main bắt buộc tại biên platform;
-việc truyền state tới UI dùng Flow và lifecycle collection.
+Calm Mode dùng chung repository nên trạng thái và thao tác playback nhất quán với
+HOME.
 
-## Navigation và ứng dụng embed
+## Navigation và TaskView
 
-Data layer tìm activity navigation của user hiện tại qua
-`ACTION_MAIN`/`CATEGORY_APP_MAPS`. Ứng dụng được phát hiện bằng `LauncherApps`,
-sau đó lọc theo user hiện tại, loại package của chính launcher, các package
-system không cần hiển thị và Car UX restriction. Target được quản lý bởi state
-machine:
+Ứng dụng bản đồ mặc định được tìm theo MAIN/CATEGORY_APP_MAPS của user hiện tại.
+ControlledRemoteCarTaskView nhúng activity vào pane phải, cập nhật bounds theo
+layout, giữ target qua vòng đời HOME và khôi phục khi task biến mất.
 
-`Idle -> Loading -> Running`, hoặc `Loading/Running -> Error`.
+State machine quản lý Idle, Loading, Running và Error. Request có timeout hữu hạn;
+khi CarSystemUIProxy hoặc Car service chưa sẵn sàng, UI báo lỗi có thể retry thay
+vì treo hoặc crash. Sau clean boot của image mục tiêu, Maps Placeholder tạo
+SurfaceView/task thật và callback onTaskAppeared hoạt động.
 
-Presentation layer sở hữu Android-specific
-`ControlledRemoteCarTaskView`. Layer này cập nhật bounds theo container XML,
-đổi visibility trong lúc tương tác với host, khởi động lại Navigation khi task
-biến mất, và báo timeout hữu hạn khi car service không cung cấp task.
+MapTosActivity giữ component fallback mà scalable SystemUI yêu cầu và cho phép
+mở App Grid khi chưa cấu hình bản đồ.
 
-## App grid
+## App Grid, an toàn khi lái và reset
 
-`AppGridActivity` giữ action AOSP:
-`com.android.car.carlauncher.ACTION_APP_GRID`. Đây là RecyclerView XML bốn cột,
-bao gồm:
+App Grid được mở bằng action
+com.android.car.carlauncher.ACTION_APP_GRID hoặc component gốc
+com.android.car.carlauncher/.AppGridActivity. Activity dùng singleInstance giống
+APK stock.
 
-- ô tìm kiếm;
+Danh sách lấy từ LauncherApps của user hiện tại và các MediaBrowserService được
+công bố. Không dùng QUERY_ALL_PACKAGES; intent query tối thiểu vẫn phát hiện đúng
+media service trên AVD. RecyclerView hỗ trợ:
+
 - tile Navigation;
-- icon và label của từng ứng dụng;
-- lọc ngay khi gõ;
-- trả về HOME với extra chọn Navigation hoặc extra component/label của app;
-- nút đóng và thao tác Back của hệ thống.
+- icon, label và thao tác mở activity/media app;
+- tìm kiếm tức thời;
+- kéo-thả để đổi thứ tự khi xe đỗ;
+- lưu thứ tự bằng Preferences DataStore;
+- phát hiện package thêm/xóa/thay đổi;
+- DiffUtil để cập nhật mà không dựng lại toàn bộ danh sách.
 
-Thứ tự app được lưu bằng Preferences DataStore. Chưa dùng Room vì dữ liệu hiện
-tại chỉ là một danh sách có thứ tự nhỏ, chưa phải dữ liệu quan hệ.
+CarUxRestrictions được kiểm tra ở cả lúc render và ngay trước khi launch. Khi mô
+phỏng đang chạy xe, ô tìm kiếm bị ẩn, kéo-thả bị khóa và app không có
+distractionOptimized bị vô hiệu hóa; media app/DO app vẫn hoạt động. Nếu dịch vụ
+an toàn không sẵn sàng, trạng thái fail-safe khóa launch không xác minh được.
+
+ResetLauncherActivity xuất hiện trong mục Apps của Automotive Settings. Activity
+hỏi xác nhận, xóa thứ tự DataStore và App Grid trở về A–Z ngay lập tức.
 
 ## Recents và QuickStep
 
-`CarRecentsActivity` là RecyclerView XML đọc task từ platform task manager. Nó
-loại task của Car-Launcher và SystemUI, hiển thị icon/label, mở task, xóa từng
-task và cung cấp nút clear-all. `CarQuickStepService` triển khai contract
-`ILauncherProxy` từ shared library của platform và chuyển overview request tới
-màn hình recents này.
+CarQuickStepService triển khai ILauncherProxy đúng shared contract của SystemUI
+trên image. Nút overview hoặc KEYCODE_APP_SWITCH mở CarRecentsActivity; gọi lại
+khi overview đang mở sẽ quay về task trên cùng.
 
-## Kiến trúc và chẩn đoán
+RecentTasksRepository dùng IRecentTasks của WindowManager Shell và có fallback
+ActivityManager. Danh sách:
 
-Project dùng cấu trúc multi-module lấy cảm hứng từ NowInAndroid:
+- chỉ lấy task của display hiện hành;
+- loại launcher, SystemUI và permission controller;
+- đọc label, icon và task snapshot;
+- mở task bằng startActivityFromRecents;
+- xóa từng task hoặc clear all;
+- phát trạng thái qua StateFlow.
 
-- domain model và repository interface không phụ thuộc UI Android;
-- data adapter cô lập API Car/LauncherApps/media/DataStore;
-- ViewModel phát immutable UI state và nhận event;
-- Fragment/Activity XML render state và bind event;
-- Hilt cung cấp dependency và ViewModel;
-- Coroutine/Flow thay cho polling và worker thread tự quản lý;
-- Timber log lifecycle, target selection, embedding, media, app grid và lỗi
-  recents.
+Permission READ_FRAME_BUFFER được khai báo và cấp nên thumbnail là snapshot thật,
+không phải placeholder.
 
-Kết quả kiểm thử AVD và các giới hạn tích hợp được ghi trong
-`TEST_REPORT_VI.md`.
+## Các component tương thích với image
+
+Ngoài HOME/App Grid/Recents, APK công bố đầy đủ các component launcher-owned có
+trong manifest stock:
+
+- ControlBarActivity và WidgetHostActivity: host AppWidget, hiện Date widget mặc
+  định và giữ ID widget;
+- DateAppWidgetProvider: cập nhật theo ngày, giờ và timezone;
+- CalmModeQCProvider tại
+  content://com.android.car.carlauncher.calmmode/calm_mode, chỉ cho SystemUI bind;
+- CalmModeActivity: màn hình ít gây xao nhãng với đồng hồ và media controls;
+- MapTosActivity: fallback bản đồ có thể embed;
+- InCallServiceImpl: contract Telecom; call UI vẫn thuộc CarSystemUI như APK gốc;
+- ResetLauncherActivity: entry reset App Grid trong Automotive Settings.
+
+Các privileged permission quan trọng như MANAGE_ACTIVITY_TASKS,
+START_TASKS_FROM_RECENTS, READ_FRAME_BUFFER và BIND_APPWIDGET đã được kiểm tra là
+granted sau khi cài đè.
+
+## Kiến trúc
+
+- domain chứa model, interface repository và state machine không phụ thuộc UI;
+- data cô lập Car API, LauncherApps, media, WindowManager Shell và DataStore;
+- presentation dùng ViewModel, immutable UI state và lifecycle-aware Flow;
+- app chỉ lắp ghép entry point/framework contract;
+- Hilt quản lý dependency; Coroutines/Flow thay polling và worker thread tự quản;
+- Java/Kotlin 17, minSdk 34, compileSdk 36, targetSdk 36.
+
+Room không phù hợp với một chuỗi thứ tự nhỏ; AndroidX Navigation không cần thiết
+vì platform đi vào app bằng activity/action cố định.
+
+## Ranh giới xác nhận
+
+Bản này đạt parity chức năng cần thiết để thay launcher trên đúng AVD API 37 đã
+audit. Không khẳng định pixel parity với mọi DEWD/OEM overlay. AVD chỉ có một
+occupant display thật; overlay display 1280x720 đã kiểm tra layout/routing nhưng
+chưa thay thế được bài test passenger occupant-zone trên phần cứng nhiều màn
+hình. Không có cuộc gọi Telecom thật hoặc media provider giàu metadata trong
+image, nên các contract tương ứng được kiểm tra ở mức bind/resolve và session có
+sẵn.

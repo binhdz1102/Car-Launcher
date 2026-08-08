@@ -21,7 +21,8 @@ class LauncherPaneStateMachine {
     }
 
     fun appeared(componentName: String): EmbeddedTaskState =
-        currentTarget?.takeIf { it.componentName == componentName }
+        currentTarget
+            ?.takeIf { it.componentName == componentName }
             ?.let(EmbeddedTaskState::Running)
             ?: error(
                 title = "Unexpected embedded activity",
@@ -29,8 +30,10 @@ class LauncherPaneStateMachine {
                 componentName = componentName,
             )
 
-    fun failed(title: String, message: String): EmbeddedTaskState =
-        error(title, message, currentTarget?.componentName)
+    fun failed(
+        title: String,
+        message: String,
+    ): EmbeddedTaskState = error(title, message, currentTarget?.componentName)
 
     fun currentMode(): LauncherPaneMode = lastContentMode
 

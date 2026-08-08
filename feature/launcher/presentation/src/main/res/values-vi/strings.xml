@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media_title">Phương tiện</string>
+    <string name="media_art_content_description">Ảnh bìa album</string>
+    <string name="media_previous">Bài trước</string>
+    <string name="media_play">Phát</string>
+    <string name="media_pause">Tạm dừng</string>
+    <string name="media_next">Bài tiếp</string>
+    <string name="media_source_button">Nguồn phương tiện</string>
+    <string name="open_media_center">Trung tâm phương tiện</string>
+    <string name="media_no_source">Không có nguồn phương tiện</string>
+    <string name="media_nothing_playing">Không có nội dung đang phát</string>
+    <string name="media_choose_source">Chọn một nguồn phương tiện để bắt đầu</string>
+    <string name="open_apps">Ứng dụng</string>
+    <string name="retry_navigation">Thử lại dẫn đường</string>
+    <string name="task_loading">Đang tải tác vụ nhúng…</string>
+    <string name="app_grid_title">Ứng dụng</string>
+    <string name="app_search_hint">Tìm ứng dụng</string>
+    <string name="app_grid_empty">Không có ứng dụng</string>
+    <string name="navigation">Dẫn đường</string>
+    <string name="close">Đóng</string>
+    <string name="app_disabled_not_distraction_optimized">Không khả dụng khi đang lái xe.</string>
+    <string name="app_disabled_safety_service">Đang chờ dịch vụ an toàn của xe.</string>
+    <string name="recents_remove">Xóa</string>
+</resources>
