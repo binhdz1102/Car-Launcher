@@ -102,12 +102,13 @@ if (-not (Test-Path -LiteralPath $apksigner)) {
 }
 $certificateOutput = & $apksigner verify --print-certs $ApkPath
 $certificateLine = $certificateOutput |
-    Where-Object { $_ -like "Signer #1 certificate SHA-256 digest:*" } |
+    Where-Object { $_ -like "*certificate SHA-256 digest:*" } |
     Select-Object -First 1
-if ($certificateLine -notmatch "([0-9a-fA-F]{64})$") {
+$certificateMatch = [regex]::Match($certificateLine, "([0-9a-fA-F]{64})$")
+if (-not $certificateMatch.Success) {
     throw "Unable to read the baseline signing certificate digest."
 }
-$certificateSha = $Matches[1].ToLowerInvariant()
+$certificateSha = $certificateMatch.Groups[1].Value.ToLowerInvariant()
 if ($certificateSha -ne $lock.baseline.certificateSha256) {
     throw "Baseline certificate mismatch. Expected $($lock.baseline.certificateSha256), got $certificateSha."
 }

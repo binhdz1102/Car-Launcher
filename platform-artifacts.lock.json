@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "apiLevel": 37,
+  "buildFingerprint": "Android/sdk_car_mysystemapp_x86_64/emulator_car64_x86_64:Baklava/CP2A.260605.016/eng.binh:userdebug/test-keys",
+  "provenance": {
+    "type": "baseline-static-library-recovery",
+    "baselineSha256": "17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5",
+    "note": "Replace with sync-platform-artifacts.ps1 once the matching AOSP Soong output is available."
+  },
+  "artifacts": [
+    {
+      "name": "android.car.jar",
+      "sha256": "20f1104ae03ae3dc776c29a55bba84036f81ac0f0169761a751934fb67b7235e"
+    },
+    {
+      "name": "framework.jar",
+      "sha256": "a1d6b5d4d9b35dd619695105181a22c86be947d2ad564948f1c05d529a5738fd"
+    },
+    {
+      "name": "systemui-shared.jar",
+      "sha256": "11c64b790fa1c6927671293b9cf0359cf23692f880a4924a495c31a6b1bd15c0"
+    },
+    {
+      "name": "systemui-shared-kotlin.jar",
+      "sha256": "69a607a2af050b80d351e24e7d298938146e68c526019dacf785b3b7b48c04e3"
+    },
+    {
+      "name": "wm-shell-aidls.jar",
+      "sha256": "69a607a2af050b80d351e24e7d298938146e68c526019dacf785b3b7b48c04e3"
+    },
+    {
+      "name": "wm-shell-shared.jar",
+      "sha256": "59a3d32e3d90fab19b7003b0ca47d2e877cd0176f3740d1f58f62d209859144a"
+    },
+    {
+      "name": "car-qc-lib.jar",
+      "sha256": "ace8c984da79189fd9131f7979911102aba91dfaeb3359f1c3bdbefd03390984"
+    }
+  ]
+}

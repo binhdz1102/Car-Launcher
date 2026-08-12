@@ -12,3 +12,5 @@ plugins {
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.compose.compiler) apply false
 }
+
+apply(from = "gradle/platform-artifacts.gradle.kts")

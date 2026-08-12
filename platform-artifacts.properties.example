@@ -1,0 +1,3 @@
+# Copy to platform-artifacts.properties only when the artifacts live outside this repository.
+# The default is platform-artifacts/api-37, an ignored directory populated by sync-platform-artifacts.ps1.
+platformArtifactsDir=platform-artifacts/api-37

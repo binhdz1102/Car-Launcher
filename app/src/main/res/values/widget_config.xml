@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="config_appwidget_host_id">2073</integer>
+    <string-array name="config_initialAppWidgets">
+        <item>com.android.car.carlauncher/.DateAppWidgetProvider</item>
+    </string-array>
+</resources>

@@ -2,6 +2,9 @@ plugins {
     id("launcher.android.library")
 }
 
+val platformArtifactsDirectory =
+    rootProject.extensions.extraProperties["platformArtifactsDirectory"] as File
+
 android {
     namespace = "com.android.car.carlauncher.core.common"
 }
@@ -12,5 +15,5 @@ dependencies {
     implementation(libs.timber)
 
     // Car is supplied by the target AAOS image. Keep it out of the standalone APK.
-    compileOnly(files(rootProject.file("../My-System-App/libs/platform/android.car.jar")))
+    compileOnly(files(platformArtifactsDirectory.resolve("android.car.jar")))
 }

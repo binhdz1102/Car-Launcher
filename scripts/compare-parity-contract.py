@@ -25,6 +25,7 @@ def normalize_manifest(content: str) -> list[str]:
         line = re.sub(r" \(line=\d+\)", "", raw_line.rstrip())
         line = re.sub(r"@0x[0-9a-fA-F]+", "@resource", line)
         line = re.sub(r"\(0x[0-9a-fA-F]+\)", "(resource-id)", line)
+        line = re.sub(r"android:version(Code|Name).*", "android:version<build-specific>", line)
         if line:
             normalized.append(line)
     return normalized

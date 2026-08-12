@@ -5,27 +5,10 @@ plugins {
     id("launcher.android.hilt")
 }
 
-val platformFrameworkJar = rootProject.file("../My-System-App/libs/platform/framework.jar")
-val systemUiSharedLibJar =
-    rootProject.file(
-        "../../out-avd-car-mysystemapp/soong/.intermediates/frameworks/base/packages/SystemUI/shared/SystemUISharedLib/android_common/javac/SystemUISharedLib.jar",
-    )
-val systemUiSharedLibKotlinJar =
-    rootProject.file(
-        "../../out-avd-car-mysystemapp/soong/.intermediates/frameworks/base/packages/SystemUI/shared/SystemUISharedLib/android_common/kotlin/SystemUISharedLib.jar",
-    )
-val windowManagerShellAidlJar =
-    rootProject.file(
-        "../../out-avd-car-mysystemapp/soong/.intermediates/frameworks/base/libs/WindowManager/Shell/WindowManager-Shell-aidls/android_common/javac/WindowManager-Shell-aidls.jar",
-    )
-val windowManagerShellSharedJar =
-    rootProject.file(
-        "../../out-avd-car-mysystemapp/soong/.intermediates/frameworks/base/libs/WindowManager/Shell/shared/WindowManager-Shell-shared/android_common/javac/WindowManager-Shell-shared.jar",
-    )
-val carQcLibJar =
-    rootProject.file(
-        "../../out-avd-car-mysystemapp/soong/.intermediates/packages/apps/Car/systemlibs/car-qc-lib/car-qc-lib/android_common/javac/car-qc-lib.jar",
-    )
+val platformArtifactsDirectory =
+    rootProject.extensions.extraProperties["platformArtifactsDirectory"] as File
+
+fun platformArtifact(name: String) = platformArtifactsDirectory.resolve(name)
 
 // These standalone projects are intentionally distributable without a .git
 // directory. Keep the field available without making Gradle depend on git.
@@ -98,14 +81,18 @@ dependencies {
 
     // QuickStep's binder contract is a platform shared library in the AOSP build. It is
     // packaged into this standalone APK just as CarLauncher-core does in Soong.
-    implementation(files(systemUiSharedLibJar))
-    implementation(files(systemUiSharedLibKotlinJar))
-    implementation(files(windowManagerShellAidlJar))
-    implementation(files(windowManagerShellSharedJar))
-    implementation(files(carQcLibJar))
-    compileOnly(files(platformFrameworkJar))
+    implementation(files(platformArtifact("systemui-shared.jar")))
+    implementation(files(platformArtifact("systemui-shared-kotlin.jar")))
+    implementation(files(platformArtifact("wm-shell-aidls.jar")))
+    implementation(files(platformArtifact("wm-shell-shared.jar")))
+    implementation(files(platformArtifact("car-qc-lib.jar")))
+    compileOnly(files(platformArtifact("framework.jar")))
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(rootProject.tasks.named("verifyPlatformArtifacts"))
 }

@@ -14,7 +14,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         pluginManager.apply("launcher.android.jacoco")
 
         extensions.configure<LibraryExtension> {
-            compileSdk = 36
+            compileSdk = 37
 
             defaultConfig {
                 // Keep library lint/API analysis aligned with the application contract.

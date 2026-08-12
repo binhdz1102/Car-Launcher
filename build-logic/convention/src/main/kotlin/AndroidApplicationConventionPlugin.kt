@@ -14,12 +14,12 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         pluginManager.apply("launcher.android.jacoco")
 
         extensions.configure<ApplicationExtension> {
-            compileSdk = 36
+            compileSdk = 37
 
             defaultConfig {
                 // Calm-mode background launches use the explicit Android 14 ActivityOptions API.
                 minSdk = 34
-                targetSdk = 36
+                targetSdk = 37
                 testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 vectorDrawables.useSupportLibrary = true
             }
