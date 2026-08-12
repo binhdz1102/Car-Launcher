@@ -14,6 +14,8 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:platform"))
     implementation(project(":core:ui"))
+    implementation(project(":feature:home:domain"))
+    implementation(project(":feature:home:presentation"))
     implementation(project(":feature:launcher:domain"))
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)

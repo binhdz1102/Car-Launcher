@@ -21,8 +21,8 @@ import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.core.platform.DrivingRestrictionMonitor
 import com.android.car.carlauncher.core.platform.PackageChangeMonitor
 import com.android.car.carlauncher.core.platform.UxrState
+import com.android.car.carlauncher.feature.home.domain.NavigationTargetResolver
 import com.android.car.carlauncher.feature.launcher.domain.EmbeddedAppTarget
-import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTargetType
 import com.android.car.carlauncher.feature.launcher.domain.LaunchableApp
 import com.android.car.carlauncher.feature.launcher.domain.LaunchableAppDisabledReason
 import com.android.car.carlauncher.feature.launcher.domain.LaunchableAppType
@@ -38,8 +38,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -51,17 +49,6 @@ import javax.inject.Singleton
 
 private val Context.launcherPreferences by preferencesDataStore("launcher_app_grid")
 private val orderKey = stringPreferencesKey("ordered_components")
-
-@Suppress("DEPRECATION")
-private fun PackageManager.resolveActivityCompat(
-    intent: Intent,
-    flags: Int,
-): ResolveInfo? =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        resolveActivity(intent, PackageManager.ResolveInfoFlags.of(flags.toLong()))
-    } else {
-        resolveActivity(intent, flags)
-    }
 
 @Suppress("DEPRECATION")
 private fun PackageManager.queryIntentServicesCompat(
@@ -136,6 +123,7 @@ class LauncherAppsRepositoryImpl
         private val carConnection: CarServiceConnection,
         private val drivingRestrictionMonitor: DrivingRestrictionMonitor,
         private val packageChangeMonitor: PackageChangeMonitor,
+        private val navigationTargetResolver: NavigationTargetResolver,
     ) : LauncherAppsRepository {
         private val launcherApps = context.getSystemService(LauncherApps::class.java)
         private val packageManager = context.packageManager
@@ -163,30 +151,7 @@ class LauncherAppsRepositoryImpl
             }.conflate()
                 .flowOn(Dispatchers.Default)
 
-        override suspend fun navigationTarget(): Result<EmbeddedAppTarget> =
-            runCatching {
-                val car = carConnection.car.filterNotNull().first()
-                val carPackageManager =
-                    car.getCarManager(CarPackageManager::class.java)
-                        ?: error("Car package safety service is unavailable.")
-                val mapIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MAPS)
-                val resolved =
-                    packageManager.resolveActivityCompat(
-                        mapIntent,
-                        PackageManager.MATCH_DEFAULT_ONLY,
-                    ) ?: error("No navigation activity is installed for the current vehicle user.")
-                val component = ComponentName(resolved.activityInfo.packageName, resolved.activityInfo.name)
-                if (restrictions.value.requiresDistractionOptimization) {
-                    check(isDistractionOptimized(carPackageManager, component)) {
-                        "The navigation activity is unavailable while driving."
-                    }
-                }
-                EmbeddedAppTarget(
-                    componentName = component.flattenToString(),
-                    label = resolved.loadLabel(packageManager).toString(),
-                    type = EmbeddedTargetType.NAVIGATION,
-                )
-            }.onFailure { Timber.tag(TAG).w(it, "Unable to resolve the default map activity") }
+        override suspend fun navigationTarget(): Result<EmbeddedAppTarget> = navigationTargetResolver.resolve()
 
         override suspend fun launch(app: LaunchableApp): Result<Unit> =
             withContext(Dispatchers.Default) {

@@ -1,5 +1,6 @@
 package com.android.car.carlauncher
 
+import android.app.ActivityOptions
 import android.content.Intent
 import android.os.Bundle
 import android.os.Process
@@ -65,10 +66,12 @@ class CarLauncher : AppCompatActivity() {
         }.getOrDefault(false)
 
     private fun launchPassengerAppGrid() {
+        val options = ActivityOptions.makeBasic().apply { setLaunchDisplayId(currentDisplayId()) }
         startActivity(
             Intent("com.android.car.carlauncher.ACTION_APP_GRID")
                 .setPackage(packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            options.toBundle(),
         )
         Timber.tag(TAG).i("Passenger display=%d redirected to App Grid", currentDisplayId())
     }

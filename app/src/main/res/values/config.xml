@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- OEM overlays may rank map-specific entry points. They must stay in the default maps app. -->
+    <string-array name="config_homeCardPreferredMapActivities" translatable="false" />
+
+    <!-- Empty means use the standard CATEGORY_APP_MAPS activity. -->
+    <string name="config_smallCanvasOptimizedMapIntent" translatable="false" />
+
+    <!-- Used only while the current AAOS user has not accepted the configured map application's TOS. -->
+    <string name="config_tosMapIntent" translatable="false" />
+
+    <!-- Packages whose updates should recreate the embedded map TaskView. -->
+    <string-array name="config_taskViewPackages" translatable="false" />
+</resources>

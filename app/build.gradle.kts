@@ -72,6 +72,8 @@ dependencies {
     implementation(project(":feature:launcher:data"))
     implementation(project(":feature:launcher:domain"))
     implementation(project(":feature:launcher:presentation"))
+    implementation(project(":feature:home:data"))
+    implementation(project(":feature:home:presentation"))
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)

@@ -11,8 +11,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.PackageChangeMonitor
 import com.android.car.carlauncher.core.ui.CarUi
-import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTaskState
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskState
+import com.android.car.carlauncher.feature.home.presentation.AndroidHomeTaskViewHost
+import com.android.car.carlauncher.feature.home.presentation.HomeTaskViewEvent
+import com.android.car.carlauncher.feature.home.presentation.HomeTaskViewHost
 import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback
 import com.android.car.carlauncher.feature.launcher.domain.MediaSource
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,8 +28,10 @@ import javax.inject.Inject
 class LauncherFragment : Fragment(R.layout.fragment_launcher) {
     @Inject lateinit var carConnection: CarServiceConnection
 
+    @Inject lateinit var packageChangeMonitor: PackageChangeMonitor
+
     private val viewModel: LauncherViewModel by viewModels()
-    private var taskHost: EmbeddedTaskHost? = null
+    private var taskHost: HomeTaskViewHost? = null
     private var loadedComponent: String? = null
     private var progressFromUser = false
 
@@ -35,11 +41,10 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
     ) {
         super.onViewCreated(view, savedInstanceState)
         val host =
-            AndroidEmbeddedTaskHost(
+            AndroidHomeTaskViewHost(
                 activity = requireActivity(),
                 carConnection = carConnection,
-                onTaskAppeared = viewModel::onTaskAppeared,
-                onError = viewModel::onEmbeddedFailure,
+                packageChangeMonitor = packageChangeMonitor,
             )
         taskHost = host
         view.findViewById<android.widget.FrameLayout>(R.id.task_view_container).addView(host.view)
@@ -48,6 +53,21 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state -> render(view, state) }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                host.events.collect { event ->
+                    when (event) {
+                        is HomeTaskViewEvent.TaskAppeared ->
+                            viewModel.onTaskAppeared(event.componentName)
+                        is HomeTaskViewEvent.TaskInfoChanged ->
+                            viewModel.onTaskInfoChanged(event.componentName)
+                        is HomeTaskViewEvent.Failure ->
+                            viewModel.onEmbeddedFailure(event.title, event.message)
+                        HomeTaskViewEvent.Recovering -> viewModel.onTaskViewRecovering()
+                    }
+                }
             }
         }
         Timber.tag(TAG).d("Launcher fragment created")
@@ -126,7 +146,7 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         view: View,
         state: LauncherUiState,
     ) {
-        if (state.currentTarget == null && state.taskState is EmbeddedTaskState.Error) {
+        if (state.currentTarget == null && state.taskState is HomeEmbeddedTaskState.Error) {
             loadedComponent = null
         }
         state.currentTarget?.let { target ->
@@ -137,10 +157,10 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         }
 
         val error = state.error
-        val isError = error != null || state.taskState is EmbeddedTaskState.Error
+        val isError = error != null || state.taskState is HomeEmbeddedTaskState.Error
         taskHost?.setVisible(!isError)
         CarUi.show(view.findViewById(R.id.task_error), isError)
-        CarUi.show(view.findViewById(R.id.task_loading), state.taskState is EmbeddedTaskState.Loading)
+        CarUi.show(view.findViewById(R.id.task_loading), state.taskState is HomeEmbeddedTaskState.Loading)
         if (error != null) {
             view.findViewById<android.widget.TextView>(R.id.task_error_title).text = error.title
             view.findViewById<android.widget.TextView>(R.id.task_error_message).text = error.message

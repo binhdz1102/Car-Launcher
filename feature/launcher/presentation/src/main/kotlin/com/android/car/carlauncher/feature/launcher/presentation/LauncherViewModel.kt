@@ -3,14 +3,15 @@ package com.android.car.carlauncher.feature.launcher.presentation
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.car.carlauncher.feature.launcher.domain.EmbeddedAppTarget
-import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTargetType
-import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTaskError
-import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTaskState
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTargetType
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskError
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskState
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskTarget
+import com.android.car.carlauncher.feature.home.domain.HomeTaskPaneMode
+import com.android.car.carlauncher.feature.home.domain.HomeTaskStateMachine
+import com.android.car.carlauncher.feature.home.domain.NavigationTargetInvalidation
 import com.android.car.carlauncher.feature.launcher.domain.LaunchableApp
 import com.android.car.carlauncher.feature.launcher.domain.LauncherAppsRepository
-import com.android.car.carlauncher.feature.launcher.domain.LauncherPaneMode
-import com.android.car.carlauncher.feature.launcher.domain.LauncherPaneStateMachine
 import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback
 import com.android.car.carlauncher.feature.launcher.domain.MediaQueueItem
 import com.android.car.carlauncher.feature.launcher.domain.MediaRepository
@@ -28,23 +29,23 @@ import timber.log.Timber
 import javax.inject.Inject
 
 data class LauncherUiState(
-    val paneMode: LauncherPaneMode = LauncherPaneMode.NAVIGATION,
-    val taskState: EmbeddedTaskState = EmbeddedTaskState.Idle,
+    val paneMode: HomeTaskPaneMode = HomeTaskPaneMode.NAVIGATION,
+    val taskState: HomeEmbeddedTaskState = HomeEmbeddedTaskState.Idle,
     val apps: List<LaunchableApp> = emptyList(),
     val media: MediaPlayback = MediaPlayback(),
     val sources: List<MediaSource> = emptyList(),
     val queue: List<MediaQueueItem> = emptyList(),
 ) {
-    val currentTarget: EmbeddedAppTarget?
+    val currentTarget: HomeEmbeddedTaskTarget?
         get() =
             when (taskState) {
-                is EmbeddedTaskState.Loading -> taskState.target
-                is EmbeddedTaskState.Running -> taskState.target
+                is HomeEmbeddedTaskState.Loading -> taskState.target
+                is HomeEmbeddedTaskState.Running -> taskState.target
                 else -> null
             }
 
-    val error: EmbeddedTaskError?
-        get() = (taskState as? EmbeddedTaskState.Error)?.error
+    val error: HomeEmbeddedTaskError?
+        get() = (taskState as? HomeEmbeddedTaskState.Error)?.error
 }
 
 sealed interface LauncherMediaAction {
@@ -71,8 +72,9 @@ class LauncherViewModel
     constructor(
         private val launcherAppsRepository: LauncherAppsRepository,
         private val mediaRepository: MediaRepository,
+        private val navigationTargetInvalidation: NavigationTargetInvalidation,
     ) : ViewModel() {
-        private val machine = LauncherPaneStateMachine()
+        private val machine = HomeTaskStateMachine()
         private val mutableUiState = MutableStateFlow(LauncherUiState())
         private var selectionJob: Job? = null
         private var selectionGeneration = 0L
@@ -92,7 +94,7 @@ class LauncherViewModel
                 launcherAppsRepository.launchableApps.collectLatest { apps ->
                     mutableUiState.value = mutableUiState.value.copy(apps = apps)
                     val current = machine.currentTarget()
-                    if (current?.type == EmbeddedTargetType.APPLICATION &&
+                    if (current?.type == HomeEmbeddedTargetType.APPLICATION &&
                         apps.none { it.componentName == current.componentName }
                     ) {
                         onEmbeddedFailure(
@@ -100,6 +102,11 @@ class LauncherViewModel
                             "The selected application is no longer available for this vehicle user.",
                         )
                     }
+                }
+            }
+            viewModelScope.launch {
+                navigationTargetInvalidation.changes.collectLatest {
+                    requestNavigationSelection()
                 }
             }
             requestNavigationSelection()
@@ -124,20 +131,42 @@ class LauncherViewModel
                 mutableUiState.value.copy(
                     paneMode =
                         when (next) {
-                            is EmbeddedTaskState.Running ->
+                            is HomeEmbeddedTaskState.Running ->
                                 if (
-                                    next.target.type == EmbeddedTargetType.NAVIGATION
+                                    next.target.type == HomeEmbeddedTargetType.NAVIGATION
                                 ) {
-                                    LauncherPaneMode.NAVIGATION
+                                    HomeTaskPaneMode.NAVIGATION
                                 } else {
-                                    LauncherPaneMode.EMBEDDED_APP
+                                    HomeTaskPaneMode.EMBEDDED_APP
                                 }
-                            is EmbeddedTaskState.Error -> LauncherPaneMode.ERROR
+                            is HomeEmbeddedTaskState.Error -> HomeTaskPaneMode.ERROR
                             else -> machine.currentMode()
                         },
                     taskState = next,
                 )
             Timber.tag(TAG).i("Embedded task appeared: %s", componentName)
+        }
+
+        fun onTaskInfoChanged(componentName: String) {
+            if (machine.currentTarget()?.componentName == componentName) {
+                onTaskAppeared(componentName)
+            } else {
+                Timber.tag(TAG).d("Ignored TaskView update for %s", componentName)
+            }
+        }
+
+        fun onTaskViewRecovering() {
+            val target = machine.currentTarget() ?: return
+            mutableUiState.value =
+                mutableUiState.value.copy(
+                    paneMode =
+                        if (target.type == HomeEmbeddedTargetType.NAVIGATION) {
+                            HomeTaskPaneMode.NAVIGATION
+                        } else {
+                            HomeTaskPaneMode.EMBEDDED_APP
+                        },
+                    taskState = machine.select(target),
+                )
         }
 
         fun onEmbeddedFailure(
@@ -147,7 +176,7 @@ class LauncherViewModel
             Timber.tag(TAG).w("Embedded task failure: %s - %s", title, message)
             mutableUiState.value =
                 mutableUiState.value.copy(
-                    paneMode = LauncherPaneMode.ERROR,
+                    paneMode = HomeTaskPaneMode.ERROR,
                     taskState = machine.failed(title, message),
                 )
         }
@@ -156,10 +185,10 @@ class LauncherViewModel
             if (!app.isEnabled) return
             selectionJob?.cancel()
             selectTarget(
-                EmbeddedAppTarget(
+                HomeEmbeddedTaskTarget(
                     componentName = app.componentName,
                     label = app.label,
-                    type = EmbeddedTargetType.APPLICATION,
+                    type = HomeEmbeddedTargetType.APPLICATION,
                 ),
             )
         }
@@ -175,19 +204,19 @@ class LauncherViewModel
             }
         }
 
-        private fun selectTarget(target: EmbeddedAppTarget) {
+        private fun selectTarget(target: HomeEmbeddedTaskTarget) {
             selectionGeneration++
             selectTargetWithoutInvalidatingGeneration(target)
         }
 
-        private fun selectTargetWithoutInvalidatingGeneration(target: EmbeddedAppTarget) {
+        private fun selectTargetWithoutInvalidatingGeneration(target: HomeEmbeddedTaskTarget) {
             mutableUiState.value =
                 mutableUiState.value.copy(
                     paneMode =
-                        if (target.type == EmbeddedTargetType.NAVIGATION) {
-                            LauncherPaneMode.NAVIGATION
+                        if (target.type == HomeEmbeddedTargetType.NAVIGATION) {
+                            HomeTaskPaneMode.NAVIGATION
                         } else {
-                            LauncherPaneMode.EMBEDDED_APP
+                            HomeTaskPaneMode.EMBEDDED_APP
                         },
                     taskState = machine.select(target),
                 )

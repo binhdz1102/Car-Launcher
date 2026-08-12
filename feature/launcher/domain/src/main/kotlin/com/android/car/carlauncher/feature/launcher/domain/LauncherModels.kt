@@ -1,19 +1,18 @@
 package com.android.car.carlauncher.feature.launcher.domain
 
-/** The surface shown in the right-hand pane of the Automotive home screen. */
-enum class LauncherPaneMode {
-    NAVIGATION,
-    EMBEDDED_APP,
-    ERROR,
-}
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTargetType
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskError
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskState
+import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskTarget
+import com.android.car.carlauncher.feature.home.domain.HomeTaskPaneMode
 
-enum class EmbeddedTargetType { NAVIGATION, APPLICATION }
-
-data class EmbeddedAppTarget(
-    val componentName: String,
-    val label: String,
-    val type: EmbeddedTargetType,
-)
+// Transitional source aliases. HOME owns TaskView state from this migration onward; legacy
+// launcher consumers retain their source contract while their values are the HOME types.
+typealias LauncherPaneMode = HomeTaskPaneMode
+typealias EmbeddedTargetType = HomeEmbeddedTargetType
+typealias EmbeddedAppTarget = HomeEmbeddedTaskTarget
+typealias EmbeddedTaskState = HomeEmbeddedTaskState
+typealias EmbeddedTaskError = HomeEmbeddedTaskError
 
 data class LaunchableApp(
     val componentName: String,
@@ -39,28 +38,6 @@ data class LauncherRestrictions(
     val requiresDistractionOptimization: Boolean = true,
     val noKeyboard: Boolean = true,
     val carServiceReady: Boolean = false,
-)
-
-sealed interface EmbeddedTaskState {
-    data object Idle : EmbeddedTaskState
-
-    data class Loading(
-        val target: EmbeddedAppTarget,
-    ) : EmbeddedTaskState
-
-    data class Running(
-        val target: EmbeddedAppTarget,
-    ) : EmbeddedTaskState
-
-    data class Error(
-        val error: EmbeddedTaskError,
-    ) : EmbeddedTaskState
-}
-
-data class EmbeddedTaskError(
-    val title: String,
-    val message: String,
-    val componentName: String? = null,
 )
 
 data class MediaPlayback(
