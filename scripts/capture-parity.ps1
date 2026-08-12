@@ -81,7 +81,9 @@ $outputDir = Join-Path $ArtifactsRoot "$timestamp-$Label-$Scenario"
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
 if ($Install) {
-    $installArguments = @("-s", $Serial, "install", "-r", "--user", "$UserId")
+    # The API 37 AVD's streamed PackageInstaller transport is unreliable. Using adb's
+    # no-streaming transport preserves the same package-manager semantics and returns a result.
+    $installArguments = @("-s", $Serial, "install", "--no-streaming", "-r", "--user", "$UserId")
     if ($Label -eq "baseline") { $installArguments += "-d" }
     $installArguments += $ApkPath
     & adb @installArguments

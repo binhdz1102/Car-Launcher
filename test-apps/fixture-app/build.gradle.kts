@@ -11,3 +11,7 @@ android {
         versionName = "1.0"
     }
 }
+
+dependencies {
+    testImplementation(libs.junit)
+}

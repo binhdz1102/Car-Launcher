@@ -42,7 +42,7 @@ if ($RestoreBaseline) {
         $ApkPath = Join-Path $repoRoot "Launcher\apk\CarLauncher.apk"
     }
     & (Join-Path $scriptRoot "verify-baseline.ps1") -ApkPath $ApkPath -VerifyDevice -Serial $Serial | Out-Null
-    $installArguments = @("-s", $Serial, "install", "-r", "-d", $ApkPath)
+    $installArguments = @("-s", $Serial, "install", "--no-streaming", "-r", "-d", $ApkPath)
 } else {
     if ([string]::IsNullOrWhiteSpace($ApkPath)) {
         $ApkPath = Join-Path $repoRoot "app\build\outputs\apk\release\app-release.apk"
@@ -53,7 +53,7 @@ if ($RestoreBaseline) {
         if ($LASTEXITCODE -ne 0) { throw "Release build failed." }
     }
     & (Join-Path $scriptRoot "verify-release-apk.ps1") -ApkPath $ApkPath | Out-Null
-    $installArguments = @("-s", $Serial, "install", "-r", $ApkPath)
+    $installArguments = @("-s", $Serial, "install", "--no-streaming", "-r", $ApkPath)
 }
 
 if ($DryRun) {

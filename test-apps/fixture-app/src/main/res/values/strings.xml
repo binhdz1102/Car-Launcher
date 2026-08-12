@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fixture_map_title">Fixture Maps</string>
+    <string name="fixture_media_title">Fixture Media</string>
+    <string name="fixture_utility_title">Fixture Utility</string>
+    <string name="fixture_restricted_title">Fixture Restricted</string>
+</resources>

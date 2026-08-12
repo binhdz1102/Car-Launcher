@@ -6,10 +6,12 @@ param(
     [int]$UserId = 10,
     [string]$SnapshotName = "car_launcher_parity_ready",
     [string]$ArtifactsRoot,
+    [string]$FixtureApk,
     [string[]]$IgnoreRect = @("0,0,1920,76"),
     [ValidateSet("home", "app-grid", "recents", "calm-mode", "widget-host", "map-tos")]
     [string[]]$Scenarios = @("home", "app-grid", "recents", "calm-mode", "widget-host", "map-tos"),
-    [switch]$CreateSnapshot
+    [switch]$CreateSnapshot,
+    [switch]$InstallFixtures
 )
 
 Set-StrictMode -Version Latest
@@ -89,6 +91,13 @@ function Save-Snapshot {
     Assert-SnapshotExists
 }
 
+function Remove-Snapshot {
+    $removeResult = Invoke-AdbText @("-s", $Serial, "emu", "avd", "snapshot", "delete", $SnapshotName)
+    if ($removeResult.ExitCode -ne 0) {
+        throw "Failed to remove AVD snapshot '$SnapshotName': $($removeResult.StandardError)"
+    }
+}
+
 function Restore-Snapshot {
     $loadResult = Invoke-AdbText @("-s", $Serial, "emu", "avd", "snapshot", "load", $SnapshotName)
     if ($loadResult.ExitCode -ne 0) {
@@ -121,7 +130,24 @@ function Capture-Scenario([string]$Label, [string]$ApkPath, [string]$Scenario, [
 & (Join-Path $scriptRoot "verify-baseline.ps1") -ApkPath $BaselineApk -VerifyDevice -Serial $Serial | Out-Null
 Wait-ForDevice
 if ($CreateSnapshot) {
+    if ($InstallFixtures) {
+        $fixtureParameters = @{
+            Serial = $Serial
+            UserId = $UserId
+        }
+        if (-not [string]::IsNullOrWhiteSpace($FixtureApk)) {
+            $fixtureParameters.ApkPath = $FixtureApk
+        }
+        & (Join-Path $scriptRoot "install-fixtures.ps1") @fixtureParameters | Out-Null
+        & (Join-Path $scriptRoot "verify-fixtures.ps1") -Serial $Serial -UserId $UserId | Out-Null
+    }
+    # Installing a fixture changes the deterministic test input. Replace an existing snapshot
+    # only on this explicit setup path so normal parity runs never mutate recovery state.
     $created = -not (Test-SnapshotExists)
+    if ($InstallFixtures -and -not $created) {
+        Remove-Snapshot
+        $created = $true
+    }
     if ($created) {
         Save-Snapshot
     }
@@ -130,6 +156,7 @@ if ($CreateSnapshot) {
         snapshotName = $SnapshotName
         serial = $Serial
         userId = $UserId
+        fixturesInstalled = [bool]$InstallFixtures
         status = if ($created) { "created-and-restored" } else { "existing-and-restored" }
     } | ConvertTo-Json
     exit 0

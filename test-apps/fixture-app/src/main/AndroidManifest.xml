@@ -1,4 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:label="Car Launcher Fixture" />
+
+    <application
+        android:allowBackup="false"
+        android:label="Car Launcher Fixture"
+        android:theme="@style/Theme.Fixture">
+
+        <!-- This is the deterministic TaskView target. It is deliberately resizeable and
+             embeddable so the HOME suite can distinguish TaskView policy failures from fixture
+             application failures. -->
+        <activity
+            android:name=".FixtureMapActivity"
+            android:allowEmbedded="true"
+            android:exported="true"
+            android:label="@string/fixture_map_title"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:taskAffinity="com.android.car.carlauncher.fixture.maps">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MAPS" />
+            </intent-filter>
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
+        </activity>
+
+        <activity
+            android:name=".FixtureMediaActivity"
+            android:allowEmbedded="true"
+            android:exported="true"
+            android:label="@string/fixture_media_title"
+            android:resizeableActivity="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
+        </activity>
+
+        <activity
+            android:name=".FixtureUtilityActivity"
+            android:allowEmbedded="true"
+            android:exported="true"
+            android:label="@string/fixture_utility_title"
+            android:resizeableActivity="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
+        </activity>
+
+        <!-- The App Grid/Recents UXR tests use this component to verify that non-DO surfaces
+             are disabled in drive mode but remain discoverable and launchable when parked. -->
+        <activity
+            android:name=".FixtureRestrictedActivity"
+            android:allowEmbedded="true"
+            android:exported="true"
+            android:label="@string/fixture_restricted_title"
+            android:resizeableActivity="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="false" />
+        </activity>
+
+        <service
+            android:name=".FixtureMediaBrowserService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+    </application>
 </manifest>
