@@ -65,7 +65,10 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(project(":core:model"))
+    implementation(project(":core:platform"))
     implementation(project(":core:ui"))
+    implementation(project(":compat"))
     implementation(project(":feature:launcher:data"))
     implementation(project(":feature:launcher:domain"))
     implementation(project(":feature:launcher:presentation"))
