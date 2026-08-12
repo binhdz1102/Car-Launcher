@@ -1,0 +1,4 @@
+# Copy this file to baseline.properties before running the parity tools.
+# The local file is intentionally ignored because the reference APK is not versioned here.
+baselineApk=Launcher/apk/CarLauncher.apk
+adbSerial=emulator-5554

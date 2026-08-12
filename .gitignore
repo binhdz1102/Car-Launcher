@@ -18,3 +18,12 @@ Thumbs.db
 # Logs and temporary files
 *.log
 *.tmp
+
+# Local AOSP reference, platform artifacts, and runtime parity evidence.
+# These inputs are deliberately never part of the replacement launcher source history.
+Launcher/
+platform-artifacts/
+baseline.properties
+parity.properties
+artifacts/
+__pycache__/
