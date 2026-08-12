@@ -20,7 +20,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import com.android.car.carlauncher.core.common.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.feature.launcher.domain.EmbeddedAppTarget
 import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTargetType
 import kotlinx.coroutines.CoroutineScope

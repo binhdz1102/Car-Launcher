@@ -2,8 +2,6 @@ package com.android.car.carlauncher.feature.launcher.data
 
 import android.app.ActivityOptions
 import android.car.content.pm.CarPackageManager
-import android.car.drivingstate.CarUxRestrictions
-import android.car.drivingstate.CarUxRestrictionsManager
 import android.car.media.CarMediaIntents
 import android.content.ComponentName
 import android.content.Context
@@ -14,14 +12,15 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.os.Process
 import android.service.media.MediaBrowserService
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.android.car.carlauncher.core.common.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.DrivingRestrictionMonitor
+import com.android.car.carlauncher.core.platform.PackageChangeMonitor
+import com.android.car.carlauncher.core.platform.UxrState
 import com.android.car.carlauncher.feature.launcher.domain.EmbeddedAppTarget
 import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTargetType
 import com.android.car.carlauncher.feature.launcher.domain.LaunchableApp
@@ -32,21 +31,18 @@ import com.android.car.carlauncher.feature.launcher.domain.LauncherRestrictions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -138,21 +134,27 @@ class LauncherAppsRepositoryImpl
     constructor(
         @param:ApplicationContext private val context: Context,
         private val carConnection: CarServiceConnection,
+        private val drivingRestrictionMonitor: DrivingRestrictionMonitor,
+        private val packageChangeMonitor: PackageChangeMonitor,
     ) : LauncherAppsRepository {
         private val launcherApps = context.getSystemService(LauncherApps::class.java)
         private val packageManager = context.packageManager
         private val currentUser = Process.myUserHandle()
-        private val callbackHandler = Handler(Looper.getMainLooper())
+        private val currentUserId = Process.myUid() / PER_USER_RANGE
         private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
         override val restrictions =
-            restrictionChanges()
+            drivingRestrictionMonitor.restrictions
+                .map { state -> state.toLauncherRestrictions() }
                 .distinctUntilChanged()
                 .stateIn(repositoryScope, SharingStarted.Eagerly, FAIL_SAFE_RESTRICTIONS)
 
         override val launchableApps: Flow<List<LaunchableApp>> =
             combine(
-                packageChanges(),
+                packageChangeMonitor.packageChanges
+                    .filter { change -> change.userId == currentUserId }
+                    .map { Unit }
+                    .onStart { emit(Unit) },
                 restrictions,
                 context.launcherPreferences.data.map { it[orderKey].orEmpty() },
                 carConnection.car,
@@ -225,89 +227,11 @@ class LauncherAppsRepositoryImpl
             context.launcherPreferences.edit { preferences -> preferences.remove(orderKey) }
         }
 
-        private fun packageChanges(): Flow<Unit> =
-            callbackFlow {
-                val callback =
-                    object : LauncherApps.Callback() {
-                        override fun onPackageAdded(
-                            packageName: String,
-                            user: android.os.UserHandle,
-                        ) {
-                            if (user == currentUser) trySend(Unit)
-                        }
-
-                        override fun onPackageChanged(
-                            packageName: String,
-                            user: android.os.UserHandle,
-                        ) {
-                            if (user == currentUser) trySend(Unit)
-                        }
-
-                        override fun onPackageRemoved(
-                            packageName: String,
-                            user: android.os.UserHandle,
-                        ) {
-                            if (user == currentUser) trySend(Unit)
-                        }
-
-                        override fun onPackagesAvailable(
-                            packageNames: Array<String>,
-                            user: android.os.UserHandle,
-                            replacing: Boolean,
-                        ) {
-                            if (user == currentUser) trySend(Unit)
-                        }
-
-                        override fun onPackagesUnavailable(
-                            packageNames: Array<String>,
-                            user: android.os.UserHandle,
-                            replacing: Boolean,
-                        ) {
-                            if (user == currentUser) trySend(Unit)
-                        }
-                    }
-                launcherApps.registerCallback(callback, callbackHandler)
-                trySend(Unit)
-                awaitClose { runCatching { launcherApps.unregisterCallback(callback) } }
-            }
-
-        @OptIn(ExperimentalCoroutinesApi::class)
-        private fun restrictionChanges(): Flow<LauncherRestrictions> =
-            carConnection.car
-                .flatMapLatest { car ->
-                    if (car == null) {
-                        flowOf(FAIL_SAFE_RESTRICTIONS)
-                    } else {
-                        val manager =
-                            runCatching {
-                                car.getCarManager(CarUxRestrictionsManager::class.java)
-                            }.getOrNull()
-                        if (manager == null) {
-                            flowOf(FAIL_SAFE_RESTRICTIONS)
-                        } else {
-                            callbackFlow {
-                                val listener =
-                                    CarUxRestrictionsManager.OnUxRestrictionsChangedListener {
-                                        trySend(it.toLauncherRestrictions())
-                                    }
-                                runCatching {
-                                    manager.registerListener(listener)
-                                    trySend(manager.currentCarUxRestrictions.toLauncherRestrictions())
-                                }.onFailure {
-                                    Timber.tag(TAG).w(it, "Car UX restrictions are unavailable")
-                                    trySend(FAIL_SAFE_RESTRICTIONS)
-                                }
-                                awaitClose { runCatching { manager.unregisterListener() } }
-                            }
-                        }
-                    }
-                }
-
-        private fun CarUxRestrictions?.toLauncherRestrictions(): LauncherRestrictions {
-            if (this == null) return FAIL_SAFE_RESTRICTIONS
+        private fun UxrState.toLauncherRestrictions(): LauncherRestrictions {
+            if (!serviceAvailable) return FAIL_SAFE_RESTRICTIONS
             return LauncherRestrictions(
-                requiresDistractionOptimization = isRequiresDistractionOptimization,
-                noKeyboard = activeRestrictions and CarUxRestrictions.UX_RESTRICTIONS_NO_KEYBOARD != 0,
+                requiresDistractionOptimization = requiresDistractionOptimization,
+                noKeyboard = noKeyboard,
                 carServiceReady = true,
             )
         }
@@ -373,6 +297,7 @@ class LauncherAppsRepositoryImpl
 
         private companion object {
             const val TAG = "CarLauncher.AppsRepository"
+            const val PER_USER_RANGE = 100_000
             val FAIL_SAFE_RESTRICTIONS = LauncherRestrictions()
             val HIDDEN_PACKAGES =
                 setOf(

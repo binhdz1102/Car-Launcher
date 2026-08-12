@@ -10,6 +10,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:platform"))
     implementation(libs.coroutines.core)
     implementation(libs.dagger.hilt.android)
     implementation(libs.timber)

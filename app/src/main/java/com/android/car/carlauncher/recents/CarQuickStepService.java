@@ -16,7 +16,7 @@ import androidx.annotation.Nullable;
 import com.android.systemui.shared.recents.ILauncherProxy;
 import com.android.systemui.shared.statusbar.phone.BarTransitions;
 import com.android.wm.shell.recents.IRecentTasks;
-import com.android.car.carlauncher.feature.launcher.data.RecentTasksSession;
+import com.android.car.carlauncher.core.platform.QuickStepRecentTasksSession;
 
 /** Bridges CarSystemUI's QuickStep binder callbacks to the XML recents Activity. */
 public class CarQuickStepService extends Service {
@@ -40,7 +40,7 @@ public class CarQuickStepService extends Service {
 
     @Override
     public boolean onUnbind(Intent intent) {
-        RecentTasksSession.INSTANCE.terminate();
+        QuickStepRecentTasksSession.terminate();
         return false;
     }
 
@@ -66,10 +66,10 @@ public class CarQuickStepService extends Service {
         @Override
         public void onInitialize(Bundle params) {
             if (params == null) {
-                RecentTasksSession.INSTANCE.terminate();
+                QuickStepRecentTasksSession.terminate();
                 return;
             }
-            RecentTasksSession.INSTANCE.initialize(params.getBinder(IRecentTasks.DESCRIPTOR));
+            QuickStepRecentTasksSession.initialize(params.getBinder(IRecentTasks.DESCRIPTOR));
         }
 
         @Override

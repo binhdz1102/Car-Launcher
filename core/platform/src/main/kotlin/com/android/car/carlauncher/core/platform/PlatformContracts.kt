@@ -49,9 +49,27 @@ interface TaskController {
     suspend fun remove(taskId: Int): Result<Unit>
 }
 
+/** A framework-free representation of the AAOS UX restriction callback. */
+data class UxrState(
+    val level: DrivingRestriction,
+    val requiresDistractionOptimization: Boolean,
+    val noKeyboard: Boolean,
+    val serviceAvailable: Boolean,
+) {
+    companion object {
+        val Unavailable =
+            UxrState(
+                level = DrivingRestriction.FULLY_RESTRICTED,
+                requiresDistractionOptimization = true,
+                noKeyboard = true,
+                serviceAvailable = false,
+            )
+    }
+}
+
 /** A Flow-first boundary for the car UX-restriction callback. */
 interface DrivingRestrictionMonitor {
-    val restrictions: StateFlow<DrivingRestriction>
+    val restrictions: StateFlow<UxrState>
 }
 
 /** A Flow-first boundary for package add/change/remove callbacks. */

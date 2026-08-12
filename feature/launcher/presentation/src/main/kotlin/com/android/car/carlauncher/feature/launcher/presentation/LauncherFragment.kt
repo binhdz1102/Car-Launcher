@@ -10,7 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.android.car.carlauncher.core.common.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.core.ui.CarUi
 import com.android.car.carlauncher.feature.launcher.domain.EmbeddedTaskState
 import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback

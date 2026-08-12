@@ -7,7 +7,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Process
-import com.android.car.carlauncher.core.common.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.QuickStepRecentTasksSession
 import com.android.car.carlauncher.feature.launcher.domain.LauncherAppsRepository
 import com.android.car.carlauncher.feature.launcher.domain.RecentTask
 import com.android.car.carlauncher.feature.launcher.domain.RecentTasksRepository
@@ -115,7 +116,7 @@ class RecentTasksRepositoryImpl
         @Suppress("DEPRECATION")
         private fun readTasks(displayId: Int): List<RecentTask> {
             val taskInfos =
-                RecentTasksSession.read(MAX_TASKS, Process.myUid() / PER_USER_RANGE)
+                QuickStepRecentTasksSession.read(MAX_TASKS, Process.myUid() / PER_USER_RANGE)
                     ?: activityManager.getRecentTasks(
                         MAX_TASKS,
                         ActivityManager.RECENT_IGNORE_UNAVAILABLE,

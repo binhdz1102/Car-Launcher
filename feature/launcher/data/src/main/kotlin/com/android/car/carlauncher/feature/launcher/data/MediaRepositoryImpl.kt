@@ -11,7 +11,7 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.SystemClock
-import com.android.car.carlauncher.core.common.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback
 import com.android.car.carlauncher.feature.launcher.domain.MediaQueueItem
 import com.android.car.carlauncher.feature.launcher.domain.MediaRepository

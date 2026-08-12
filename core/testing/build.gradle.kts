@@ -10,4 +10,6 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:platform"))
     implementation(libs.coroutines.core)
+
+    testImplementation(libs.junit)
 }

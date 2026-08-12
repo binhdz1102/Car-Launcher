@@ -1,7 +1,6 @@
 package com.android.car.carlauncher.core.testing
 
 import com.android.car.carlauncher.core.model.DisplayTarget
-import com.android.car.carlauncher.core.model.DrivingRestriction
 import com.android.car.carlauncher.core.model.LauncherComponent
 import com.android.car.carlauncher.core.platform.DrivingRestrictionMonitor
 import com.android.car.carlauncher.core.platform.PackageChange
@@ -9,6 +8,7 @@ import com.android.car.carlauncher.core.platform.PackageChangeMonitor
 import com.android.car.carlauncher.core.platform.PlatformConnectionState
 import com.android.car.carlauncher.core.platform.PlatformTaskEvent
 import com.android.car.carlauncher.core.platform.TaskController
+import com.android.car.carlauncher.core.platform.UxrState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,13 +52,13 @@ class FakeTaskController : TaskController {
 }
 
 class FakeDrivingRestrictionMonitor(
-    initial: DrivingRestriction = DrivingRestriction.UNRESTRICTED,
+    initial: UxrState = UxrState.Unavailable,
 ) : DrivingRestrictionMonitor {
     private val mutableRestrictions = MutableStateFlow(initial)
 
-    override val restrictions: StateFlow<DrivingRestriction> = mutableRestrictions.asStateFlow()
+    override val restrictions: StateFlow<UxrState> = mutableRestrictions.asStateFlow()
 
-    fun set(value: DrivingRestriction) {
+    fun set(value: UxrState) {
         mutableRestrictions.value = value
     }
 }
