@@ -16,6 +16,12 @@ import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback
 import com.android.car.carlauncher.feature.launcher.domain.MediaQueueItem
 import com.android.car.carlauncher.feature.launcher.domain.MediaRepository
 import com.android.car.carlauncher.feature.launcher.domain.MediaSource
+import com.android.car.carlauncher.feature.media.domain.AssistiveCard
+import com.android.car.carlauncher.feature.media.domain.AssistiveRepository
+import com.android.car.carlauncher.feature.media.domain.CallCard
+import com.android.car.carlauncher.feature.media.domain.CallRepository
+import com.android.car.carlauncher.feature.media.domain.HomeCardCoordinator
+import com.android.car.carlauncher.feature.media.domain.ProjectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +41,8 @@ data class LauncherUiState(
     val media: MediaPlayback = MediaPlayback(),
     val sources: List<MediaSource> = emptyList(),
     val queue: List<MediaQueueItem> = emptyList(),
+    val activeCall: CallCard? = null,
+    val assistive: AssistiveCard? = null,
 ) {
     val currentTarget: HomeEmbeddedTaskTarget?
         get() =
@@ -66,12 +74,29 @@ sealed interface LauncherMediaAction {
     ) : LauncherMediaAction
 }
 
+sealed interface LauncherHomeCardAction {
+    data object ToggleCallMute : LauncherHomeCardAction
+
+    data object EndCall : LauncherHomeCardAction
+
+    data object OpenDialpad : LauncherHomeCardAction
+
+    data class LaunchAssistive(
+        val card: AssistiveCard,
+    ) : LauncherHomeCardAction
+}
+
 @HiltViewModel
+@Suppress("TooManyFunctions") // HOME selection and card actions share one lifecycle-aware state owner.
 class LauncherViewModel
     @Inject
     constructor(
         private val launcherAppsRepository: LauncherAppsRepository,
         private val mediaRepository: MediaRepository,
+        private val homeCardCoordinator: HomeCardCoordinator,
+        private val callRepository: CallRepository,
+        private val projectionRepository: ProjectionRepository,
+        private val assistiveRepository: AssistiveRepository,
         private val navigationTargetInvalidation: NavigationTargetInvalidation,
     ) : ViewModel() {
         private val machine = HomeTaskStateMachine()
@@ -85,8 +110,15 @@ class LauncherViewModel
                 mediaRepository.playback,
                 mediaRepository.sources,
                 mediaRepository.queue,
-            ) { state, media, sources, queue ->
-                state.copy(media = media, sources = sources, queue = queue)
+                homeCardCoordinator.states,
+            ) { state, media, sources, queue, homeCards ->
+                state.copy(
+                    media = media,
+                    sources = sources,
+                    queue = queue,
+                    activeCall = homeCards.activeCall,
+                    assistive = homeCards.assistive,
+                )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LauncherUiState())
 
         init {
@@ -201,6 +233,21 @@ class LauncherViewModel
                 LauncherMediaAction.OpenCenter -> mediaRepository.openMediaCenter()
                 is LauncherMediaAction.Seek -> mediaRepository.seekTo(action.positionMs)
                 is LauncherMediaAction.SelectSource -> mediaRepository.selectSource(action.source)
+            }
+        }
+
+        fun handleHomeCardAction(action: LauncherHomeCardAction) {
+            when (action) {
+                LauncherHomeCardAction.ToggleCallMute -> callRepository.toggleMute()
+                LauncherHomeCardAction.EndCall -> callRepository.endCall()
+                LauncherHomeCardAction.OpenDialpad -> callRepository.openDialpad()
+                is LauncherHomeCardAction.LaunchAssistive -> {
+                    if (action.card.id.startsWith("projection:")) {
+                        projectionRepository.launchCurrentProjection()
+                    } else {
+                        assistiveRepository.launch(action.card)
+                    }
+                }
             }
         }
 

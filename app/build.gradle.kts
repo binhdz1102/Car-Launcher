@@ -74,6 +74,9 @@ dependencies {
     implementation(project(":feature:launcher:presentation"))
     implementation(project(":feature:home:data"))
     implementation(project(":feature:home:presentation"))
+    implementation(project(":feature:media:data"))
+    implementation(project(":feature:media:domain"))
+    implementation(project(":feature:media:presentation"))
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)

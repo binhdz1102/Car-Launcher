@@ -5,6 +5,10 @@ import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskError
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskState
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskTarget
 import com.android.car.carlauncher.feature.home.domain.HomeTaskPaneMode
+import com.android.car.carlauncher.feature.media.domain.MediaPlayback as FeatureMediaPlayback
+import com.android.car.carlauncher.feature.media.domain.MediaQueueItem as FeatureMediaQueueItem
+import com.android.car.carlauncher.feature.media.domain.MediaRepository as FeatureMediaRepository
+import com.android.car.carlauncher.feature.media.domain.MediaSource as FeatureMediaSource
 
 // Transitional source aliases. HOME owns TaskView state from this migration onward; legacy
 // launcher consumers retain their source contract while their values are the HOME types.
@@ -13,6 +17,13 @@ typealias EmbeddedTargetType = HomeEmbeddedTargetType
 typealias EmbeddedAppTarget = HomeEmbeddedTaskTarget
 typealias EmbeddedTaskState = HomeEmbeddedTaskState
 typealias EmbeddedTaskError = HomeEmbeddedTaskError
+
+// MEDIA now owns its models and platform adapter. These aliases preserve the legacy launcher API
+// until the HOME presentation contract is moved in its own migration slice.
+typealias MediaPlayback = FeatureMediaPlayback
+typealias MediaSource = FeatureMediaSource
+typealias MediaQueueItem = FeatureMediaQueueItem
+typealias MediaRepository = FeatureMediaRepository
 
 data class LaunchableApp(
     val componentName: String,
@@ -38,32 +49,6 @@ data class LauncherRestrictions(
     val requiresDistractionOptimization: Boolean = true,
     val noKeyboard: Boolean = true,
     val carServiceReady: Boolean = false,
-)
-
-data class MediaPlayback(
-    val sourcePackage: String? = null,
-    val sourceComponent: String? = null,
-    val sourceLabel: String = "",
-    val title: String = "",
-    val artist: String = "",
-    val artworkBytes: ByteArray? = null,
-    val isPlaying: Boolean = false,
-    val positionMs: Long = 0L,
-    val durationMs: Long = 0L,
-    val canSkipPrevious: Boolean = false,
-    val canSkipNext: Boolean = false,
-    val canSeek: Boolean = false,
-)
-
-data class MediaSource(
-    val componentName: String,
-    val label: String,
-)
-
-data class MediaQueueItem(
-    val id: Long,
-    val title: String,
-    val subtitle: String,
 )
 
 data class RecentTask(

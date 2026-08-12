@@ -1,7 +1,6 @@
 package com.android.car.carlauncher.feature.launcher.presentation
 
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.View
 import android.widget.PopupMenu
@@ -19,6 +18,9 @@ import com.android.car.carlauncher.feature.home.presentation.HomeTaskViewEvent
 import com.android.car.carlauncher.feature.home.presentation.HomeTaskViewHost
 import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback
 import com.android.car.carlauncher.feature.launcher.domain.MediaSource
+import com.android.car.carlauncher.feature.media.domain.AssistiveCard
+import com.android.car.carlauncher.feature.media.domain.CallCard
+import com.android.car.carlauncher.feature.media.presentation.MediaArtworkDecoder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -34,6 +36,7 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
     private var taskHost: HomeTaskViewHost? = null
     private var loadedComponent: String? = null
     private var progressFromUser = false
+    private val artworkDecoder = MediaArtworkDecoder()
 
     override fun onViewCreated(
         view: View,
@@ -115,6 +118,12 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
             val state = viewModel.uiState.value
             showMediaSources(view, state.sources, hostInteraction)
         }
+        view.findViewById<View>(R.id.assistive_card).setOnClickListener {
+            viewModel.uiState.value.assistive?.let { card ->
+                viewModel.handleHomeCardAction(LauncherHomeCardAction.LaunchAssistive(card))
+            }
+            hostInteraction()
+        }
         view.findViewById<android.widget.SeekBar>(R.id.media_progress).setOnSeekBarChangeListener(
             object : android.widget.SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(
@@ -165,7 +174,29 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
             view.findViewById<android.widget.TextView>(R.id.task_error_title).text = error.title
             view.findViewById<android.widget.TextView>(R.id.task_error_message).text = error.message
         }
-        renderMedia(view, state.media)
+        renderHomeCards(view, state)
+    }
+
+    private fun renderHomeCards(
+        view: View,
+        state: LauncherUiState,
+    ) {
+        renderAssistive(view, state.assistive)
+        state.activeCall?.let { call ->
+            renderCall(view, call)
+        } ?: renderMedia(view, state.media)
+    }
+
+    private fun renderAssistive(
+        view: View,
+        card: AssistiveCard?,
+    ) {
+        val cardView = view.findViewById<View>(R.id.assistive_card)
+        CarUi.show(cardView, card != null)
+        if (card == null) return
+        view.findViewById<android.widget.TextView>(R.id.assistive_title).text = card.title
+        view.findViewById<android.widget.TextView>(R.id.assistive_body).text = card.body
+        view.findViewById<android.widget.TextView>(R.id.assistive_footer).text = card.footer.orEmpty()
     }
 
     private fun renderMedia(
@@ -179,9 +210,9 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         view.findViewById<android.widget.TextView>(R.id.media_artist).text =
             playback.artist.ifBlank { getString(R.string.media_choose_source) }
         view.findViewById<android.widget.ImageView>(R.id.media_art).setImageBitmap(
-            playback.artworkBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) },
+            artworkDecoder.decode(playback.artwork),
         )
-        if (playback.artworkBytes == null) {
+        if (playback.artwork == null) {
             view
                 .findViewById<android.widget.ImageView>(R.id.media_art)
                 .setImageResource(R.drawable.ic_media_note)
@@ -195,10 +226,64 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         view.findViewById<View>(R.id.media_previous).isEnabled = playback.canSkipPrevious
         view.findViewById<View>(R.id.media_play_pause).isEnabled = playback.sourcePackage != null
         view.findViewById<View>(R.id.media_next).isEnabled = playback.canSkipNext
+        view.findViewById<android.widget.TextView>(R.id.media_previous).apply {
+            text = getString(R.string.media_previous)
+            isSelected = false
+        }
+        view.findViewById<android.widget.TextView>(R.id.media_next).apply {
+            text = getString(R.string.media_next)
+            isSelected = false
+        }
+        view.findViewById<View>(R.id.media_previous).setOnClickListener {
+            viewModel.handleMediaAction(LauncherMediaAction.Previous)
+            taskHost?.restoreAfterHostInteraction()
+        }
+        view.findViewById<View>(R.id.media_play_pause).setOnClickListener {
+            viewModel.handleMediaAction(LauncherMediaAction.PlayPause)
+            taskHost?.restoreAfterHostInteraction()
+        }
+        view.findViewById<View>(R.id.media_next).setOnClickListener {
+            viewModel.handleMediaAction(LauncherMediaAction.Next)
+            taskHost?.restoreAfterHostInteraction()
+        }
         view.findViewById<android.widget.TextView>(R.id.media_play_pause).text =
             if (playback.isPlaying) getString(R.string.media_pause) else getString(R.string.media_play)
         view.findViewById<View>(R.id.media_source_button).isEnabled = true
         view.findViewById<View>(R.id.media_center).isEnabled = playback.sourceComponent != null
+    }
+
+    private fun renderCall(
+        view: View,
+        call: CallCard,
+    ) {
+        view.findViewById<android.widget.TextView>(R.id.media_source).text = call.appLabel
+        view.findViewById<android.widget.TextView>(R.id.media_title).text =
+            call.caller.ifBlank { getString(R.string.call_in_progress) }
+        view.findViewById<android.widget.TextView>(R.id.media_artist).text =
+            getString(R.string.call_state, call.state.name.lowercase())
+        view.findViewById<android.widget.ImageView>(R.id.media_art).setImageResource(R.drawable.ic_media_note)
+        view.findViewById<android.widget.SeekBar>(R.id.media_progress).apply {
+            isEnabled = false
+            progress = 0
+        }
+        view.findViewById<android.widget.TextView>(R.id.media_previous).apply {
+            text = getString(R.string.call_mute)
+            isEnabled = true
+            setOnClickListener { viewModel.handleHomeCardAction(LauncherHomeCardAction.ToggleCallMute) }
+            isSelected = call.isMuted
+        }
+        view.findViewById<android.widget.TextView>(R.id.media_play_pause).apply {
+            text = getString(R.string.call_end)
+            isEnabled = true
+            setOnClickListener { viewModel.handleHomeCardAction(LauncherHomeCardAction.EndCall) }
+        }
+        view.findViewById<android.widget.TextView>(R.id.media_next).apply {
+            text = getString(R.string.call_dialpad)
+            isEnabled = true
+            setOnClickListener { viewModel.handleHomeCardAction(LauncherHomeCardAction.OpenDialpad) }
+        }
+        view.findViewById<View>(R.id.media_source_button).isEnabled = false
+        view.findViewById<View>(R.id.media_center).isEnabled = false
     }
 
     private fun showMediaSources(

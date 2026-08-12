@@ -9,6 +9,7 @@ android {
 dependencies {
     implementation(project(":core:common"))
     implementation(project(":feature:home:domain"))
+    implementation(project(":feature:media:domain"))
     implementation(libs.coroutines.core)
     implementation(libs.dagger.hilt.android)
 

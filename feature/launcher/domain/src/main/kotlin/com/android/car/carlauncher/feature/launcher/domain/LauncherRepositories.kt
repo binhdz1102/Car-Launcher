@@ -16,24 +16,6 @@ interface LauncherAppsRepository {
     suspend fun clearOrderedComponents()
 }
 
-interface MediaRepository {
-    val playback: StateFlow<MediaPlayback>
-    val sources: StateFlow<List<MediaSource>>
-    val queue: StateFlow<List<MediaQueueItem>>
-
-    fun playPause()
-
-    fun previous()
-
-    fun next()
-
-    fun seekTo(positionMs: Long)
-
-    fun selectSource(source: MediaSource)
-
-    fun openMediaCenter()
-}
-
 interface RecentTasksRepository {
     val tasks: StateFlow<List<RecentTask>>
 

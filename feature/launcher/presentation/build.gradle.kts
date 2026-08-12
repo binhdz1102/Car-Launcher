@@ -17,6 +17,8 @@ dependencies {
     implementation(project(":feature:home:domain"))
     implementation(project(":feature:home:presentation"))
     implementation(project(":feature:launcher:domain"))
+    implementation(project(":feature:media:domain"))
+    implementation(project(":feature:media:presentation"))
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.coroutines.android)
