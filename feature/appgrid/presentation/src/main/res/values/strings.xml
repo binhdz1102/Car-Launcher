@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_grid_title">Apps</string>
+    <string name="app_grid_media_title">Media apps</string>
+    <string name="app_grid_close">Close</string>
+    <string name="app_grid_search_hint">Search applications</string>
+    <string name="app_grid_empty">No applications available</string>
+    <string name="app_grid_reorder">Reorder apps</string>
+    <string name="app_grid_done_reordering">Done</string>
+    <string name="app_grid_tos_message">Some apps require review of the user terms before they can be opened.</string>
+    <string name="app_grid_tos_review">Review</string>
+    <string name="app_grid_tos_not_now">Not now</string>
+    <string name="app_grid_no_reason"></string>
+    <string name="app_grid_unavailable_while_driving">Unavailable while driving.</string>
+    <string name="app_grid_safety_service_unavailable">Waiting for the vehicle safety service.</string>
+    <string name="app_grid_tos_required">Review user terms to open this app.</string>
+</resources>

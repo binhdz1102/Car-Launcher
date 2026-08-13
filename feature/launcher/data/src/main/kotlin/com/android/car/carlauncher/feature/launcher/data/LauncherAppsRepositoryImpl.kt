@@ -14,9 +14,6 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Process
 import android.service.media.MediaBrowserService
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.core.platform.DrivingRestrictionMonitor
 import com.android.car.carlauncher.core.platform.PackageChangeMonitor
@@ -47,9 +44,6 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.launcherPreferences by preferencesDataStore("launcher_app_grid")
-private val orderKey = stringPreferencesKey("ordered_components")
-
 @Suppress("DEPRECATION")
 private fun PackageManager.queryIntentServicesCompat(
     intent: Intent,
@@ -71,22 +65,6 @@ private fun isDistractionOptimized(
             component.className,
         )
     }.getOrDefault(false)
-
-private fun orderAndFilter(
-    apps: List<LaunchableApp>,
-    serializedOrder: String,
-): List<LaunchableApp> {
-    val indexes =
-        serializedOrder
-            .split('|')
-            .filter(String::isNotBlank)
-            .withIndex()
-            .associate { (index, value) -> value to index }
-    return apps.sortedWith(
-        compareBy<LaunchableApp> { indexes[it.componentName] ?: Int.MAX_VALUE }
-            .thenBy { it.label.lowercase() },
-    )
-}
 
 private fun createLaunchableApp(
     component: ComponentName,
@@ -144,10 +122,9 @@ class LauncherAppsRepositoryImpl
                     .map { Unit }
                     .onStart { emit(Unit) },
                 restrictions,
-                context.launcherPreferences.data.map { it[orderKey].orEmpty() },
                 carConnection.car,
-            ) { _, currentRestrictions, savedOrder, _ ->
-                orderAndFilter(loadApps(currentRestrictions), savedOrder)
+            ) { _, currentRestrictions, _ ->
+                loadApps(currentRestrictions).sortedBy { app -> app.label.lowercase() }
             }.conflate()
                 .flowOn(Dispatchers.Default)
 
@@ -181,16 +158,6 @@ class LauncherAppsRepositoryImpl
                     }
                 }.onFailure { Timber.tag(TAG).w(it, "Unable to launch %s", app.componentName) }
             }
-
-        override suspend fun saveOrderedComponents(componentNames: List<String>) {
-            context.launcherPreferences.edit { preferences ->
-                preferences[orderKey] = componentNames.joinToString("|")
-            }
-        }
-
-        override suspend fun clearOrderedComponents() {
-            context.launcherPreferences.edit { preferences -> preferences.remove(orderKey) }
-        }
 
         private fun UxrState.toLauncherRestrictions(): LauncherRestrictions {
             if (!serviceAvailable) return FAIL_SAFE_RESTRICTIONS

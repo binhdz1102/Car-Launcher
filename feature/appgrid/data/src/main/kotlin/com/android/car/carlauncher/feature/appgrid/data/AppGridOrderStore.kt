@@ -7,4 +7,6 @@ interface AppGridOrderStore {
     suspend fun read(): List<LauncherComponent>
 
     suspend fun write(order: List<LauncherComponent>)
+
+    suspend fun clear()
 }

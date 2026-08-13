@@ -3,40 +3,40 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    android:background="@drawable/launcher_app_tile"
+    android:background="@drawable/app_grid_tile"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center"
-    android:minHeight="180dp"
+    android:minHeight="176dp"
     android:orientation="vertical"
     android:padding="16dp">
 
     <ImageView
-        android:id="@+id/app_icon"
-        android:layout_width="96dp"
-        android:layout_height="96dp"
+        android:id="@+id/app_grid_icon"
+        android:layout_width="84dp"
+        android:layout_height="84dp"
         android:contentDescription="@null"
         android:scaleType="fitCenter" />
 
     <TextView
-        android:id="@+id/app_label"
+        android:id="@+id/app_grid_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:ellipsize="end"
         android:gravity="center"
         android:maxLines="2"
-        android:textColor="@color/launcher_text_primary"
+        android:textColor="@color/app_grid_text_primary"
         android:textSize="18sp" />
 
     <TextView
-        android:id="@+id/app_disabled_reason"
+        android:id="@+id/app_grid_reason"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:gravity="center"
-        android:maxLines="3"
-        android:textColor="@color/launcher_text_secondary"
+        android:maxLines="2"
+        android:textColor="@color/app_grid_text_secondary"
         android:textSize="11sp"
         android:visibility="gone" />
 </LinearLayout>

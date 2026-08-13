@@ -50,8 +50,7 @@ class LauncherContractInstrumentedTest {
             )
         assertTrue(
             appGridActivities.any {
-                it.activityInfo.name ==
-                    "$PACKAGE_NAME.feature.launcher.presentation.AppGridActivity"
+                it.activityInfo.name == "$PACKAGE_NAME.AppGridActivity"
             },
         )
     }

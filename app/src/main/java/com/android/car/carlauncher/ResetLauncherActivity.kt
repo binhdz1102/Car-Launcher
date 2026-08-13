@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.android.car.carlauncher.feature.launcher.domain.LauncherAppsRepository
+import com.android.car.carlauncher.feature.appgrid.domain.AppGridRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -12,7 +12,7 @@ import javax.inject.Inject
 /** Automotive Settings entry that restores the application grid's default A-Z ordering. */
 @AndroidEntryPoint
 class ResetLauncherActivity : AppCompatActivity() {
-    @Inject lateinit var launcherAppsRepository: LauncherAppsRepository
+    @Inject lateinit var appGridRepository: AppGridRepository
 
     private var dialog: AlertDialog? = null
 
@@ -23,7 +23,7 @@ class ResetLauncherActivity : AppCompatActivity() {
         builder.setMessage(R.string.reset_appgrid_dialogue_message)
         builder.setPositiveButton(android.R.string.ok) { _, _ ->
             lifecycleScope.launch {
-                launcherAppsRepository.clearOrderedComponents()
+                appGridRepository.clearOrder()
                 finish()
             }
         }

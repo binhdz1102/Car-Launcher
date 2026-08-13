@@ -10,10 +10,6 @@ interface LauncherAppsRepository {
     suspend fun navigationTarget(): Result<EmbeddedAppTarget>
 
     suspend fun launch(app: LaunchableApp): Result<Unit>
-
-    suspend fun saveOrderedComponents(componentNames: List<String>)
-
-    suspend fun clearOrderedComponents()
 }
 
 interface RecentTasksRepository {

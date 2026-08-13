@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Zero means show again after the next boot; positive values are days. -->
+    <integer name="config_tos_banner_resurface_time_days">1</integer>
+</resources>

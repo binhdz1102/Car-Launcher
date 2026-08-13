@@ -77,6 +77,9 @@ dependencies {
     implementation(project(":feature:media:data"))
     implementation(project(":feature:media:domain"))
     implementation(project(":feature:media:presentation"))
+    implementation(project(":feature:appgrid:data"))
+    implementation(project(":feature:appgrid:domain"))
+    implementation(project(":feature:appgrid:presentation"))
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)

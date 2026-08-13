@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_grid_title">Ứng dụng</string>
+    <string name="app_grid_media_title">Ứng dụng đa phương tiện</string>
+    <string name="app_grid_close">Đóng</string>
+    <string name="app_grid_search_hint">Tìm ứng dụng</string>
+    <string name="app_grid_empty">Không có ứng dụng</string>
+    <string name="app_grid_reorder">Sắp xếp ứng dụng</string>
+    <string name="app_grid_done_reordering">Xong</string>
+    <string name="app_grid_tos_message">Một số ứng dụng yêu cầu xem điều khoản người dùng trước khi mở.</string>
+    <string name="app_grid_tos_review">Xem lại</string>
+    <string name="app_grid_tos_not_now">Để sau</string>
+    <string name="app_grid_unavailable_while_driving">Không khả dụng khi đang lái xe.</string>
+    <string name="app_grid_safety_service_unavailable">Đang chờ dịch vụ an toàn của xe.</string>
+    <string name="app_grid_tos_required">Xem điều khoản người dùng để mở ứng dụng này.</string>
+</resources>

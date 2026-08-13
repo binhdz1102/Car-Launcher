@@ -1,5 +1,6 @@
 plugins {
     id("launcher.android.feature")
+    id("launcher.android.hilt")
 }
 
 android {
@@ -7,6 +8,10 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:model"))
     implementation(project(":core:ui"))
     implementation(project(":feature:appgrid:domain"))
+    implementation(libs.timber)
+
+    testImplementation(libs.junit)
 }

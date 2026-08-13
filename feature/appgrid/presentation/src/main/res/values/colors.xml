@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_grid_background">#0C0F10</color>
+    <color name="app_grid_surface">#1E2529</color>
+    <color name="app_grid_surface_pressed">#34454E</color>
+    <color name="app_grid_tos_surface">#2B303A</color>
+    <color name="app_grid_text_primary">#F0F4F5</color>
+    <color name="app_grid_text_secondary">#BCC4C8</color>
+</resources>
