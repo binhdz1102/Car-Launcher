@@ -26,7 +26,7 @@ the gate threshold.
 | Candidate | versionCode 1000, `custom-dev`, `/data/app` update |
 | Baseline SHA-256 | `17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5` |
 | Certificate | `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8` |
-| Candidate release SHA-256 | `6332c187d02a2a0154a2799543c6a6101c3588e76a359308a2a0070baa50d121` |
+| Candidate release SHA-256 | `7bb94ae650624518d5e161849150ddcb30f03a69964a1bc679caa2d7f213622c` |
 | Snapshot | `car_launcher_parity_ready` |
 
 ## Build and static quality
@@ -44,7 +44,7 @@ The following checks completed successfully after the Calm Mode changes:
 
 The release certificate is checked by `scripts/verify-release-apk.ps1`; no
 credential is printed. The release artifact verified in this handoff is
-`6332c187d02a2a0154a2799543c6a6101c3588e76a359308a2a0070baa50d121`.
+`7bb94ae650624518d5e161849150ddcb30f03a69964a1bc679caa2d7f213622c`.
 
 ## Contract parity
 

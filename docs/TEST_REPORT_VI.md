@@ -25,7 +25,7 @@ không che bằng cách hạ ngưỡng gate.
 | Candidate | versionCode 1000, `custom-dev`, update `/data/app` |
 | SHA-256 baseline | `17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5` |
 | Certificate | `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8` |
-| SHA-256 release candidate | `6332c187d02a2a0154a2799543c6a6101c3588e76a359308a2a0070baa50d121` |
+| SHA-256 release candidate | `7bb94ae650624518d5e161849150ddcb30f03a69964a1bc679caa2d7f213622c` |
 | Snapshot | `car_launcher_parity_ready` |
 
 ## Build và quality tĩnh
@@ -43,7 +43,7 @@ Các kiểm tra sau pass sau thay đổi Calm Mode:
 
 Certificate release được kiểm bởi `scripts/verify-release-apk.ps1`; không in
 credential. Artifact release bàn giao có SHA-256
-`6332c187d02a2a0154a2799543c6a6101c3588e76a359308a2a0070baa50d121`.
+`7bb94ae650624518d5e161849150ddcb30f03a69964a1bc679caa2d7f213622c`.
 
 ## Contract parity
 
