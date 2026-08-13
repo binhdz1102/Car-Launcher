@@ -26,12 +26,13 @@ the gate threshold.
 | Candidate | versionCode 1000, `custom-dev`, `/data/app` update |
 | Baseline SHA-256 | `17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5` |
 | Certificate | `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8` |
-| Candidate release SHA-256 | `7bb94ae650624518d5e161849150ddcb30f03a69964a1bc679caa2d7f213622c` |
+| Candidate release SHA-256 | `2d1ff232432bb8bc44cd27bcec380b5ca7c14840627fe26418d23b2876d7935c` |
 | Snapshot | `car_launcher_parity_ready` |
 
 ## Build and static quality
 
-The following checks completed successfully after the Calm Mode changes:
+The following checks completed successfully after the App Grid and parity
+harness changes:
 
 ```text
 ./gradlew :feature:calmmode:data:ktlintCheck
@@ -44,7 +45,7 @@ The following checks completed successfully after the Calm Mode changes:
 
 The release certificate is checked by `scripts/verify-release-apk.ps1`; no
 credential is printed. The release artifact verified in this handoff is
-`7bb94ae650624518d5e161849150ddcb30f03a69964a1bc679caa2d7f213622c`.
+`2d1ff232432bb8bc44cd27bcec380b5ca7c14840627fe26418d23b2876d7935c`.
 
 ## Contract parity
 
@@ -66,6 +67,12 @@ surface and retained the SystemUI control bar. A clean focused capture at
 `artifacts/parity/20260813-211333-candidate-calm-mode` compared with the stock
 capture using the documented clock/date masks produced `SSIM 1.0` and
 `differentPixelRatio 0.0`; its contract comparison also passed.
+
+The stabilized foreground harness now stops known background fixture tasks and
+launches App Grid explicitly. The post-fix App Grid contract matched the stock
+inventory, row-major ordering and item bounds (20 entries); the focused visual
+check still needs the documented focus/icon masks and remains below the strict
+SSIM gate, so it is evidence of deterministic capture rather than acceptance.
 
 ## Functional AVD evidence
 

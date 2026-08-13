@@ -25,12 +25,12 @@ không che bằng cách hạ ngưỡng gate.
 | Candidate | versionCode 1000, `custom-dev`, update `/data/app` |
 | SHA-256 baseline | `17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5` |
 | Certificate | `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8` |
-| SHA-256 release candidate | `7bb94ae650624518d5e161849150ddcb30f03a69964a1bc679caa2d7f213622c` |
+| SHA-256 release candidate | `2d1ff232432bb8bc44cd27bcec380b5ca7c14840627fe26418d23b2876d7935c` |
 | Snapshot | `car_launcher_parity_ready` |
 
 ## Build và quality tĩnh
 
-Các kiểm tra sau pass sau thay đổi Calm Mode:
+Các kiểm tra sau pass sau thay đổi App Grid và parity harness:
 
 ```text
 ./gradlew :feature:calmmode:data:ktlintCheck
@@ -43,7 +43,7 @@ Các kiểm tra sau pass sau thay đổi Calm Mode:
 
 Certificate release được kiểm bởi `scripts/verify-release-apk.ps1`; không in
 credential. Artifact release bàn giao có SHA-256
-`7bb94ae650624518d5e161849150ddcb30f03a69964a1bc679caa2d7f213622c`.
+`2d1ff232432bb8bc44cd27bcec380b5ca7c14840627fe26418d23b2876d7935c`.
 
 ## Contract parity
 
@@ -65,6 +65,12 @@ SystemUI. Capture tập trung sạch tại
 `artifacts/parity/20260813-211333-candidate-calm-mode`, so với stock bằng mask
 clock/date theo guide, đạt `SSIM 1.0` và `differentPixelRatio 0.0`; contract
 cũng pass.
+
+Foreground harness đã được ổn định bằng cách dừng các fixture task nền đã biết
+và launch App Grid bằng component tường minh. Contract App Grid sau thay đổi
+khớp inventory, thứ tự row-major và bounds của stock (20 entry); kiểm tra hình
+tập trung vẫn cần mask focus/icon theo guide và chưa đạt strict SSIM gate, nên
+đây là bằng chứng capture xác định chứ chưa phải nghiệm thu.
 
 ## Bằng chứng chức năng trên AVD
 
