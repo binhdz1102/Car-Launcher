@@ -4,4 +4,5 @@
     <color name="launcher_surface">#181D20</color>
     <color name="launcher_accent">#8BCDF4</color>
     <color name="calm_surface">#090B0C</color>
+    <color name="calm_clock">#C7CBD1</color>
 </resources>

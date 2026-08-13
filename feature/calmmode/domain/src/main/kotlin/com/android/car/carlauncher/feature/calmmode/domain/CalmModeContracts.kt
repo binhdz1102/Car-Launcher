@@ -7,6 +7,20 @@ data class CalmModeState(
     val title: String,
 )
 
+enum class TemperatureUnit {
+    CELSIUS,
+    FAHRENHEIT,
+}
+
+data class CalmTemperature(
+    val value: Float,
+    val unit: TemperatureUnit,
+)
+
+interface TemperatureRepository {
+    val temperature: Flow<CalmTemperature?>
+}
+
 interface CalmModeRepository {
     val state: Flow<CalmModeState>
 

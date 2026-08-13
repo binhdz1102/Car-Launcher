@@ -3,6 +3,7 @@ package com.android.car.carlauncher.feature.calmmode.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.car.carlauncher.feature.calmmode.domain.CalmModeRepository
+import com.android.car.carlauncher.feature.calmmode.domain.TemperatureRepository
 import com.android.car.carlauncher.feature.media.domain.MediaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,13 +22,15 @@ class CalmModeViewModel
     constructor(
         private val calmModeRepository: CalmModeRepository,
         private val mediaRepository: MediaRepository,
+        private val temperatureRepository: TemperatureRepository,
     ) : ViewModel() {
         val uiState: StateFlow<CalmModeUiState> =
             combine(
                 calmModeRepository.state,
                 mediaRepository.playback,
-            ) { calmMode, playback ->
-                CalmModeUiState(state = calmMode, playback = playback)
+                temperatureRepository.temperature,
+            ) { calmMode, playback, temperature ->
+                CalmModeUiState(state = calmMode, playback = playback, temperature = temperature)
             }.onStart { emit(CalmModeUiState()) }
                 .stateIn(
                     scope = viewModelScope,
