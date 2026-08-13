@@ -7,13 +7,22 @@ import android.content.ComponentName
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.view.isEmpty
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.android.car.carlauncher.core.model.DisplayTarget
 import com.android.car.carlauncher.core.ui.applySystemBarInsets
+import com.android.car.carlauncher.feature.widgets.WidgetHostViewModel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 /** Persistent widget surface referenced by the scalable CarSystemUI configuration. */
 open class WidgetHostActivity : AppCompatActivity() {
+    private val viewModel: WidgetHostViewModel by viewModels()
     private lateinit var widgetHost: AppWidgetHost
     private lateinit var widgetManager: AppWidgetManager
     private lateinit var container: ViewGroup
@@ -25,7 +34,12 @@ open class WidgetHostActivity : AppCompatActivity() {
         container = findViewById(R.id.widget_container)
         widgetManager = AppWidgetManager.getInstance(this)
         widgetHost = AppWidgetHost(this, resources.getInteger(R.integer.config_appwidget_host_id))
-        loadConfiguredWidgets()
+        viewModel.bind(currentDisplayTarget())
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.state.collect { loadConfiguredWidgets() }
+            }
+        }
     }
 
     override fun onStart() {
@@ -35,7 +49,16 @@ open class WidgetHostActivity : AppCompatActivity() {
 
     override fun onStop() {
         runCatching { widgetHost.stopListening() }
+        viewModel.unbind()
         super.onStop()
+    }
+
+    private fun currentDisplayTarget(): DisplayTarget {
+        val displayId = display?.displayId ?: android.view.Display.DEFAULT_DISPLAY
+        return DisplayTarget(
+            displayId = displayId,
+            isDefaultDisplay = displayId == android.view.Display.DEFAULT_DISPLAY,
+        )
     }
 
     private fun loadConfiguredWidgets() {

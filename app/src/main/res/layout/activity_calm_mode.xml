@@ -1,63 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/calm_mode_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/calm_surface"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="32dp">
-
-    <TextView
-        android:id="@+id/calm_media_source"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@color/launcher_accent"
-        android:textSize="18sp" />
-
-    <TextView
-        android:id="@+id/calm_media_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textColor="@color/white"
-        android:textSize="28sp" />
+    android:clickable="true"
+    android:focusable="true"
+    android:padding="40dp">
 
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:orientation="horizontal">
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical">
 
-        <Button
-            android:id="@+id/calm_previous"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/media_previous" />
+            android:gravity="center"
+            android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/calm_play_pause"
+            <TextClock
+                android:id="@+id/calm_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="EEEE, MMMM d"
+                android:format24Hour="EEEE, MMMM d"
+                android:textColor="@color/launcher_text_secondary"
+                android:textSize="24sp" />
+        </LinearLayout>
+
+        <TextClock
+            android:id="@+id/calm_clock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/media_play" />
+            android:layout_marginTop="18dp"
+            android:format12Hour="h:mm"
+            android:format24Hour="HH:mm"
+            android:textColor="@color/white"
+            android:textSize="112sp"
+            android:textStyle="normal" />
 
-        <Button
-            android:id="@+id/calm_next"
+        <TextView
+            android:id="@+id/calm_media_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/media_next" />
+            android:layout_marginTop="20dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/launcher_accent"
+            android:textSize="24sp"
+            android:visibility="gone" />
     </LinearLayout>
-
-    <Button
-        android:id="@+id/calm_media_center"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/open_media_center" />
-
-    <Button
-        android:id="@+id/calm_close"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/calm_mode_close" />
-</LinearLayout>
+</FrameLayout>

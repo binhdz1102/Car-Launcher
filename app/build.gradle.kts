@@ -83,6 +83,9 @@ dependencies {
     implementation(project(":feature:recents:data"))
     implementation(project(":feature:recents:domain"))
     implementation(project(":feature:recents:presentation"))
+    implementation(project(":feature:calmmode:data"))
+    implementation(project(":feature:calmmode:presentation"))
+    implementation(project(":feature:widgets"))
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)

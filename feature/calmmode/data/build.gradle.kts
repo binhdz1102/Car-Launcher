@@ -1,5 +1,6 @@
 plugins {
     id("launcher.android.library")
+    id("launcher.android.hilt")
 }
 
 android {

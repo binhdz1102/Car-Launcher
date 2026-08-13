@@ -1,0 +1,36 @@
+package com.android.car.carlauncher.feature.calmmode.data
+
+import android.content.Context
+import com.android.car.carlauncher.feature.calmmode.domain.CalmModeRepository
+import com.android.car.carlauncher.feature.calmmode.domain.CalmModeState
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class AndroidCalmModeRepository
+    @Inject
+    constructor(
+        @param:ApplicationContext private val context: Context,
+        private val preferenceStore: CalmModePreferenceStore,
+    ) : CalmModeRepository {
+        override val state: Flow<CalmModeState> =
+            preferenceStore.enabled.map { enabled ->
+                CalmModeState(
+                    enabled = enabled,
+                    title =
+                        context.resources
+                            .getIdentifier("calm_mode_title", "string", context.packageName)
+                            .takeIf { it != 0 }
+                            ?.let(context::getString)
+                            ?: "Calm mode",
+                )
+            }
+
+        override suspend fun setEnabled(enabled: Boolean): Result<Unit> =
+            runCatching {
+                preferenceStore.writeEnabled(enabled)
+            }
+    }
