@@ -5,10 +5,12 @@ com.android.car.carlauncher. It keeps the public component, permission, signing,
 HOME, SystemUI, QuickStep, widget and Settings contracts used by the matching
 AOSP Automotive image while using a modern multi-module implementation.
 
-For the exact development AVD documented below, the result is ready to replace
-the prebuilt launcher through an APK update. This is a runtime compatibility
-statement for that image, not a claim of pixel-identical UI across every OEM
-overlay.
+For the exact development AVD documented below, the component and functional
+audit passes and the APK can be installed as a `/data/app` update. Strict
+baseline screenshot parity is still open for HOME, App Grid, Recents, Widget
+Host and Map ToS; therefore this repository does not yet claim pixel-identical
+replacement. Calm Mode is now contract- and visually aligned after masking
+dynamic clock/date regions.
 
 ## Replacement status
 
@@ -42,25 +44,19 @@ The implementation covers:
 - SystemUI App Grid and Calm Mode QC integration;
 - system-window insets, user/display-aware routing and secondary-display layout.
 
-## Architecture
+## Documentation
 
-The dependency direction is presentation -> domain and data -> domain:
+- [Architecture and data flow (EN)](docs/ARCHITECTURE_EN.md) / [VI](docs/ARCHITECTURE_VI.md)
+- [Migration matrix (EN)](docs/MIGRATION_MATRIX_EN.md) / [VI](docs/MIGRATION_MATRIX_VI.md)
+- [Build and install (EN)](docs/BUILD_INSTALL_EN.md) / [VI](docs/BUILD_INSTALL_VI.md)
+- [AVD parity procedure (EN)](docs/AVD_PARITY_GUIDE_EN.md) / [VI](docs/AVD_PARITY_GUIDE_VI.md)
+- [Rollback (EN)](docs/ROLLBACK_EN.md) / [VI](docs/ROLLBACK_VI.md)
+- [Latest test report (EN)](docs/TEST_REPORT_EN.md) / [VI](docs/TEST_REPORT_VI.md)
 
-~~~text
-app/                         platform entry points and compatibility components
-core/common/                 shared Car service connection and dispatching
-core/ui/                     insets and reusable XML UI helpers
-feature/launcher/domain/     immutable models, repository contracts, state machine
-feature/launcher/data/       Car, LauncherApps, media, recents and DataStore adapters
-feature/launcher/presentation/ ViewModels, activities/fragments and RecyclerView adapters
-build-logic/                 shared Gradle convention plugins
-~~~
-
-Hilt, ViewModel, Coroutines/Flow, lifecycle-aware collection, DataStore,
-DiffUtil and explicit state machines are used at their appropriate boundaries.
-Room and an AndroidX navigation graph are intentionally absent: the only
-persistent model is a small ordered list, and AAOS enters the feature through
-fixed actions/components rather than an in-app navigation graph.
+The full module graph and MVVM/Clean boundaries are maintained in the
+architecture document. Hilt, ViewModel, Coroutines/Flow, lifecycle-aware
+collection, DataStore, DiffUtil and explicit state machines are used at their
+appropriate boundaries.
 
 Build settings are Java/Kotlin 17, minSdk 34, compileSdk 36 and targetSdk 36.
 The implementation is verified on Android 17/API 37.
@@ -145,7 +141,8 @@ adb -s emulator-5554 shell am start -W   -n com.android.car.carlauncher/.ResetLa
 Direct AVD results, including UXR injection, SystemUI integration, TaskView,
 recents snapshots, reset ordering and the secondary-display check, are recorded
 in [the English test report](docs/TEST_REPORT_EN.md) and
-[the Vietnamese test report](docs/TEST_REPORT_VI.md).
+[the Vietnamese test report](docs/TEST_REPORT_VI.md). The latest full parity
+run is under `artifacts/parity/run-20260813-204544` (ignored by Git).
 
 The exact AVD only exposes one physical occupant display. A trusted 1280x720
 overlay display verified display routing and responsive layout, but it is not a
