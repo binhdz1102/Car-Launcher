@@ -51,13 +51,17 @@ function Invoke-AdbText([string[]]$Arguments) {
 
 function Wait-ForDevice {
     $deadline = [DateTime]::UtcNow.AddSeconds(60)
+    $stableChecks = 0
     while ([DateTime]::UtcNow -lt $deadline) {
         $stateResult = Invoke-AdbText @("-s", $Serial, "get-state")
         $bootResult = Invoke-AdbText @("-s", $Serial, "shell", "getprop", "sys.boot_completed")
         $state = $stateResult.StandardOutput.Trim()
         $bootCompleted = $bootResult.StandardOutput.Trim()
         if ($state -eq "device" -and $bootCompleted -eq "1") {
-            return
+            $stableChecks++
+            if ($stableChecks -ge 3) { return }
+        } else {
+            $stableChecks = 0
         }
         Start-Sleep -Seconds 2
     }

@@ -71,11 +71,75 @@ function Dismiss-InitialUserNotice {
     # activity launch. It belongs to the image, not Car Launcher, and would otherwise
     # obscure both golden screenshots. Detect it through the accessibility tree and
     # dismiss only when the exact button is present.
-    & adb -s $Serial shell uiautomator dump /sdcard/car_launcher_parity_notice.xml | Out-Null
-    $noticeXml = (& adb -s $Serial exec-out cat /sdcard/car_launcher_parity_notice.xml) -join ""
-    if ($noticeXml -match "Dismiss for now") {
-        & adb -s $Serial shell input tap 1476 582 | Out-Null
-        Start-Sleep -Milliseconds 500
+    function Read-NoticeTree {
+        for ($retry = 0; $retry -lt 3; $retry++) {
+            $dumpOutput = @(& adb -s $Serial shell uiautomator dump /sdcard/car_launcher_parity_notice.xml 2>&1)
+            if ($LASTEXITCODE -eq 0) {
+                $noticeXml = (& adb -s $Serial exec-out cat /sdcard/car_launcher_parity_notice.xml) -join ""
+                if ($noticeXml -match '<hierarchy') { return $noticeXml }
+            }
+            # UiAutomation is a singleton on this AVD. Give the shell service time to unregister
+            # before retrying instead of creating overlapping dumps and crashing uiautomator.
+            Start-Sleep -Milliseconds 1000
+        }
+        return ""
+    }
+
+    Start-Sleep -Milliseconds 750
+    for ($attempt = 0; $attempt -lt 3; $attempt++) {
+        $noticeXml = Read-NoticeTree
+        if ([string]::IsNullOrWhiteSpace($noticeXml)) { return }
+        $dismissNode = [regex]::Match($noticeXml, 'text="Dismiss for now"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
+        if ($dismissNode.Success) {
+            $left = [int]$dismissNode.Groups[1].Value
+            $top = [int]$dismissNode.Groups[2].Value
+            $right = [int]$dismissNode.Groups[3].Value
+            $bottom = [int]$dismissNode.Groups[4].Value
+            $x = [int](($left + $right) / 2)
+            $y = [int](($top + $bottom) / 2)
+            & adb -s $Serial shell input tap $x $y | Out-Null
+            Start-Sleep -Milliseconds 1200
+            continue
+        }
+        if ($noticeXml -notmatch "Dismiss for now") { return }
+        Start-Sleep -Milliseconds 750
+    }
+    Start-Sleep -Milliseconds 750
+}
+
+function Stop-BackgroundScenarioTasks {
+    # The development AVD may keep a previously selected Settings/MySystemApp task on top while
+    # the snapshot is restored. Stop those external tasks before collecting a launcher golden.
+    foreach ($package in @(
+            "com.android.mysystemapp",
+            "com.android.car.settings",
+            "com.google.android.car.kitchensink",
+            "com.android.car.carlauncher.fixture"
+        )) {
+        & adb -s $Serial shell am force-stop --user $UserId $package | Out-Null
+    }
+}
+
+function Get-ScenarioComponent([string]$Name) {
+    switch ($Name) {
+        "home" { return "com.android.car.carlauncher/.CarLauncher" }
+        "app-grid" { return "com.android.car.carlauncher/.AppGridActivity" }
+        "recents" { return "com.android.car.carlauncher/.recents.CarRecentsActivity" }
+        "calm-mode" { return "com.android.car.carlauncher/.calmmode.CalmModeActivity" }
+        "widget-host" { return "com.android.car.carlauncher/.WidgetHostActivity" }
+        "map-tos" { return "com.android.car.carlauncher/.homescreen.MapTosActivity" }
+        default { return "" }
+    }
+}
+
+function Ensure-ScenarioForeground([string]$ScenarioCommand, [string]$Component) {
+    if ([string]::IsNullOrWhiteSpace($Component)) { return }
+    for ($attempt = 0; $attempt -lt 3; $attempt++) {
+        $activityState = (& adb -s $Serial shell dumpsys activity activities) -join "`n"
+        if ($activityState -match "topResumedActivity=.*$([regex]::Escape($Component))") { return }
+        Stop-BackgroundScenarioTasks
+        & adb -s $Serial shell $ScenarioCommand | Out-Null
+        Start-Sleep -Seconds 1
     }
 }
 
@@ -108,13 +172,17 @@ $aapt2 = Get-Aapt2
 & $aapt2 dump xmltree $ApkPath --file AndroidManifest.xml | Set-Content -LiteralPath (Join-Path $outputDir "manifest.xmltree.txt")
 
 if ($LaunchScenario) {
+    Stop-BackgroundScenarioTasks
     & adb -s $Serial shell am force-stop com.android.car.carlauncher
     $scenarioCommand = switch ($Scenario) {
         "home" {
             "am start --user $UserId -W -a android.intent.action.MAIN -c android.intent.category.HOME -n com.android.car.carlauncher/.CarLauncher"
         }
         "app-grid" {
-            "am start --user $UserId -W -a com.android.car.carlauncher.ACTION_APP_GRID -p com.android.car.carlauncher"
+            # Use the stable component for the visual scenario. The action resolution contract is
+            # still captured below; explicit launch avoids an existing single-instance task or
+            # TaskView stealing focus between baseline and candidate captures.
+            "am start --user $UserId -W -n com.android.car.carlauncher/.AppGridActivity"
         }
         "recents" {
             "am start --user $UserId -W -a com.android.car.carlauncher.recents.OPEN_RECENT_TASK_ACTION -p com.android.car.carlauncher"
@@ -133,6 +201,7 @@ if ($LaunchScenario) {
         Set-Content -LiteralPath (Join-Path $outputDir "launch-$Scenario.txt")
     Start-Sleep -Seconds 2
     Dismiss-InitialUserNotice
+    Ensure-ScenarioForeground $scenarioCommand (Get-ScenarioComponent $Scenario)
 }
 
 $commands = [ordered]@{
