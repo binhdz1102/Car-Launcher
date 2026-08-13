@@ -14,6 +14,10 @@
     <style name="Theme.CarLauncher.Recents" parent="Theme.CarLauncher" />
     <style name="Theme.CarLauncher.CalmMode" parent="Theme.CarLauncher">
         <item name="android:windowBackground">@color/calm_surface</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
     </style>
     <style name="Theme.CarLauncher.WidgetHost" parent="Theme.CarLauncher" />
     <style name="Theme.CarLauncher.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert" />

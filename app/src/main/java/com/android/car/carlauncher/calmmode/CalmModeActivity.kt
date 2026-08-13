@@ -13,8 +13,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.car.carlauncher.R
-import com.android.car.carlauncher.feature.calmmode.presentation.CalmModeViewModel
 import com.android.car.carlauncher.feature.calmmode.domain.TemperatureUnit
+import com.android.car.carlauncher.feature.calmmode.presentation.CalmModeViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -43,7 +43,7 @@ class CalmModeActivity : AppCompatActivity() {
                             ?.let { mediaTitle ->
                                 state.playback.artist
                                     .takeIf(String::isNotBlank)
-                                    ?.let { artist -> "$mediaTitle  •  $artist" }
+                                    ?.let { artist -> "$mediaTitle  ${'\u2022'}  $artist" }
                                     ?: mediaTitle
                             }
                     findViewById<TextView>(R.id.calm_media_title).apply {
@@ -52,11 +52,17 @@ class CalmModeActivity : AppCompatActivity() {
                     }
                     findViewById<TextView>(R.id.calm_temperature).apply {
                         text =
-                            state.temperature?.let { temperature ->
-                                val rounded = temperature.value.toInt()
-                                val suffix = if (temperature.unit == TemperatureUnit.FAHRENHEIT) "°" else "°C"
-                                "$rounded$suffix"
-                            }.orEmpty()
+                            state.temperature
+                                ?.let { temperature ->
+                                    val rounded = temperature.value.toInt()
+                                    val suffix =
+                                        if (temperature.unit == TemperatureUnit.FAHRENHEIT) {
+                                            "\u00b0"
+                                        } else {
+                                            "\u00b0C"
+                                        }
+                                    "$rounded$suffix"
+                                }.orEmpty()
                         visibility = if (text.isNullOrBlank()) View.GONE else View.VISIBLE
                     }
                 }
