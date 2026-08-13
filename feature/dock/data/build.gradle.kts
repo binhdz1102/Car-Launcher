@@ -1,5 +1,6 @@
 plugins {
     id("launcher.android.library")
+    id("launcher.android.hilt")
 }
 
 android {
@@ -8,6 +9,10 @@ android {
 
 dependencies {
     implementation(project(":feature:dock:domain"))
+    implementation(project(":core:model"))
     implementation(project(":libraries:dock"))
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.coroutines.android)
+
+    testImplementation(libs.junit)
 }

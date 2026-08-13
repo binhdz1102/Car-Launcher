@@ -86,6 +86,8 @@ dependencies {
     implementation(project(":feature:calmmode:data"))
     implementation(project(":feature:calmmode:presentation"))
     implementation(project(":feature:widgets"))
+    implementation(project(":feature:dock:data"))
+    implementation(project(":feature:dock:presentation"))
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)
