@@ -50,12 +50,3 @@ data class LauncherRestrictions(
     val noKeyboard: Boolean = true,
     val carServiceReady: Boolean = false,
 )
-
-data class RecentTask(
-    val taskId: Int,
-    val componentName: String,
-    val packageName: String,
-    val label: String,
-    val thumbnailBytes: ByteArray? = null,
-    val isEnabled: Boolean = true,
-)

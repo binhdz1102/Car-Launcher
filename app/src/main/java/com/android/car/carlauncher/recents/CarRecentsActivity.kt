@@ -9,12 +9,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.android.car.carlauncher.R
+import com.android.car.carlauncher.core.model.DisplayTarget
 import com.android.car.carlauncher.core.ui.applySystemBarInsets
-import com.android.car.carlauncher.feature.launcher.presentation.RecentsAdapter
-import com.android.car.carlauncher.feature.launcher.presentation.RecentsViewModel
+import com.android.car.carlauncher.feature.recents.presentation.RecentsAdapter
+import com.android.car.carlauncher.feature.recents.presentation.RecentsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -31,16 +32,16 @@ class CarRecentsActivity : AppCompatActivity() {
 
         val empty = findViewById<TextView>(R.id.recents_empty)
         val list = findViewById<RecyclerView>(R.id.recents_list)
-        val adapter = RecentsAdapter(viewModel::open, viewModel::remove)
-        list.layoutManager = LinearLayoutManager(this)
+        val adapter = RecentsAdapter(viewModel::launch, viewModel::dismiss)
+        list.layoutManager = GridLayoutManager(this, RECENTS_SPAN_COUNT)
         list.adapter = adapter
         findViewById<View>(R.id.recents_clear_all).setOnClickListener { viewModel.clearAll() }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.tasks.collect { tasks ->
-                    adapter.submitList(tasks)
-                    val isEmpty = tasks.isEmpty()
+                viewModel.uiState.collect { state ->
+                    adapter.submitList(state.tasks)
+                    val isEmpty = state.tasks.isEmpty()
                     empty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                     list.visibility = if (isEmpty) View.GONE else View.VISIBLE
                 }
@@ -51,7 +52,7 @@ class CarRecentsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (!handleDismissAction()) viewModel.refresh(currentDisplayId())
+        if (!handleDismissAction()) viewModel.refresh(currentDisplayTarget())
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -63,7 +64,7 @@ class CarRecentsActivity : AppCompatActivity() {
     private fun handleDismissAction(): Boolean {
         if (intent?.action != OPEN_RECENT_TASK_ACTION) return false
         intent.action = null
-        viewModel.openTopRunningTask(currentDisplayId(), ::launchHome)
+        viewModel.launchTopRunningTask(currentDisplayTarget(), ::launchHome)
         return true
     }
 
@@ -75,10 +76,17 @@ class CarRecentsActivity : AppCompatActivity() {
         )
     }
 
-    private fun currentDisplayId(): Int = display?.displayId ?: android.view.Display.DEFAULT_DISPLAY
+    private fun currentDisplayTarget(): DisplayTarget {
+        val displayId = display?.displayId ?: android.view.Display.DEFAULT_DISPLAY
+        return DisplayTarget(
+            displayId = displayId,
+            isDefaultDisplay = displayId == android.view.Display.DEFAULT_DISPLAY,
+        )
+    }
 
     private companion object {
         const val TAG = "CarLauncher.CarRecents"
+        const val RECENTS_SPAN_COUNT = 3
         const val OPEN_RECENT_TASK_ACTION =
             "com.android.car.carlauncher.recents.OPEN_RECENT_TASK_ACTION"
     }

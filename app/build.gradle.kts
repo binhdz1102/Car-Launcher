@@ -80,6 +80,9 @@ dependencies {
     implementation(project(":feature:appgrid:data"))
     implementation(project(":feature:appgrid:domain"))
     implementation(project(":feature:appgrid:presentation"))
+    implementation(project(":feature:recents:data"))
+    implementation(project(":feature:recents:domain"))
+    implementation(project(":feature:recents:presentation"))
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)
