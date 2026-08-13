@@ -106,6 +106,7 @@ dependencies {
     implementation(files(platformArtifact("wm-shell-aidls.jar")))
     implementation(files(platformArtifact("wm-shell-shared.jar")))
     implementation(files(platformArtifact("car-qc-lib.jar")))
+    compileOnly(files(platformArtifact("android.car.jar")))
     compileOnly(files(platformArtifact("framework.jar")))
 
     testImplementation(libs.junit)

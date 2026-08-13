@@ -6,6 +6,8 @@
     <string name="calm_mode_title">Calm mode</string>
     <string name="calm_mode_close">Close calm mode</string>
     <string name="map_fallback_message">Navigation is not available until a map app is configured.</string>
+    <string name="map_tos_review_button_text">Maps is disabled. Terms of service not accepted</string>
+    <string name="map_tos_review_button_distraction_optimized_text">Maps is disabled. Review after your drive.</string>
     <string name="widget_empty">No launcher widgets are configured.</string>
     <string name="reset_appgrid_title">Reset app grid to A-Z order</string>
     <string name="reset_appgrid_dialogue_message">This will remove all custom ordering. Do you want to continue?</string>

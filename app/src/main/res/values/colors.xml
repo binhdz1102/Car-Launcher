@@ -3,6 +3,8 @@
     <color name="white">#FFFFFFFF</color>
     <color name="launcher_surface">#181D20</color>
     <color name="launcher_accent">#8BCDF4</color>
+    <!-- AOSP car_green_500 used by the stock MapTosActivity surface. -->
+    <color name="map_tos_surface">#41AF6A</color>
     <color name="calm_surface">#000000</color>
     <color name="calm_clock">#C7CBD1</color>
 </resources>
