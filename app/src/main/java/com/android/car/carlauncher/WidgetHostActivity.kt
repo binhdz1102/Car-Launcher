@@ -17,10 +17,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.android.car.carlauncher.core.model.DisplayTarget
 import com.android.car.carlauncher.core.ui.applySystemBarInsets
 import com.android.car.carlauncher.feature.widgets.WidgetHostViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 /** Persistent widget surface referenced by the scalable CarSystemUI configuration. */
+@AndroidEntryPoint
 open class WidgetHostActivity : AppCompatActivity() {
     private val viewModel: WidgetHostViewModel by viewModels()
     private lateinit var widgetHost: AppWidgetHost
