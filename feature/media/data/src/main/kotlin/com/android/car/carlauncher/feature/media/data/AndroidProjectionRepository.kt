@@ -1,5 +1,6 @@
 package com.android.car.carlauncher.feature.media.data
 
+import android.annotation.SuppressLint
 import android.car.Car
 import android.car.CarProjectionManager
 import android.car.projection.ProjectionStatus
@@ -28,6 +29,7 @@ import javax.inject.Singleton
 
 /** Flow adapter for CarProjectionManager that mirrors the stock ProjectionModel. */
 @Singleton
+@SuppressLint("MissingPermission")
 @OptIn(ExperimentalCoroutinesApi::class)
 class AndroidProjectionRepository
     @Inject

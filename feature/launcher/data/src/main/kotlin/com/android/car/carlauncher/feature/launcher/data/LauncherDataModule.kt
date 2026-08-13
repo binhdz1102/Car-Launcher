@@ -11,5 +11,4 @@ import dagger.hilt.components.SingletonComponent
 abstract class LauncherDataModule {
     @Binds
     abstract fun bindLauncherAppsRepository(impl: LauncherAppsRepositoryImpl): LauncherAppsRepository
-
 }

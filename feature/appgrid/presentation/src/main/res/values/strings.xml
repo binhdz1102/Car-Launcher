@@ -10,7 +10,7 @@
     <string name="app_grid_tos_message">Some apps require review of the user terms before they can be opened.</string>
     <string name="app_grid_tos_review">Review</string>
     <string name="app_grid_tos_not_now">Not now</string>
-    <string name="app_grid_no_reason"></string>
+    <string name="app_grid_no_reason" translatable="false"></string>
     <string name="app_grid_unavailable_while_driving">Unavailable while driving.</string>
     <string name="app_grid_safety_service_unavailable">Waiting for the vehicle safety service.</string>
     <string name="app_grid_tos_required">Review user terms to open this app.</string>

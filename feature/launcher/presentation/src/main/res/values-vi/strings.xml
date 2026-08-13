@@ -22,4 +22,9 @@
     <string name="app_disabled_not_distraction_optimized">Không khả dụng khi đang lái xe.</string>
     <string name="app_disabled_safety_service">Đang chờ dịch vụ an toàn của xe.</string>
     <string name="recents_remove">Xóa</string>
+    <string name="call_in_progress">Đang thực hiện cuộc gọi</string>
+    <string name="call_state">Cuộc gọi %1$s</string>
+    <string name="call_mute">Tắt tiếng</string>
+    <string name="call_end">Kết thúc</string>
+    <string name="call_dialpad">Bàn phím số</string>
 </resources>

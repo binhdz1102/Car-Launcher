@@ -1,5 +1,6 @@
 package com.android.car.carlauncher.feature.appgrid.data
 
+import android.annotation.SuppressLint
 import android.app.ActivityOptions
 import android.app.usage.UsageStatsManager
 import android.car.content.pm.CarPackageManager
@@ -547,6 +548,7 @@ class AndroidAppGridRepository
             )
         }
 
+        @SuppressLint("MissingPermission")
         private fun launchMedia(
             component: ComponentName,
             display: DisplayTarget,
@@ -581,6 +583,7 @@ class AndroidAppGridRepository
                 Context.MODE_PRIVATE,
             )
 
+        @SuppressLint("MissingPermission")
         private fun recentPackages(): Set<String> {
             val manager = context.getSystemService(UsageStatsManager::class.java) ?: return emptySet()
             val now = System.currentTimeMillis()

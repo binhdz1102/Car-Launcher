@@ -1,5 +1,6 @@
 package com.android.car.carlauncher.feature.media.data
 
+import android.annotation.SuppressLint
 import android.car.media.CarMediaIntents
 import android.car.media.CarMediaManager
 import android.content.ComponentName
@@ -46,6 +47,7 @@ import javax.inject.Singleton
  */
 @Singleton
 @Suppress("TooManyFunctions") // The platform media lifecycle belongs in one callback adapter.
+@SuppressLint("MissingPermission")
 @OptIn(ExperimentalCoroutinesApi::class)
 class AndroidMediaRepository
     @Inject

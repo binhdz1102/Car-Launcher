@@ -1,5 +1,6 @@
 package com.android.car.carlauncher.feature.media.data
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
@@ -185,6 +186,7 @@ class InCallControlGateway
     }
 
 @Singleton
+@SuppressLint("MissingPermission")
 class AndroidCallRepository
     @Inject
     constructor(
