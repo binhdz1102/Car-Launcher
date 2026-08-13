@@ -177,6 +177,28 @@ $baselineArtifacts = [ordered]@{}
 $candidateArtifacts = [ordered]@{}
 $comparisonResults = @()
 $completed = $false
+$failureMessage = $null
+
+function Write-RunArtifact {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Status,
+        [string]$ErrorMessage
+    )
+
+    [PSCustomObject]@{
+        snapshotName = $SnapshotName
+        serial = $Serial
+        userId = $UserId
+        status = $Status
+        baselineArtifacts = $baselineArtifacts
+        candidateArtifacts = $candidateArtifacts
+        comparisons = $comparisonResults
+        finalSmokeArtifact = if ($completed) { $finalSmoke } else { $null }
+        passed = $completed
+        error = $ErrorMessage
+    } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $runDir "run.json") -Encoding utf8
+}
 
 try {
     Restore-Snapshot
@@ -222,19 +244,17 @@ try {
     # A passing result is only accepted after reinstalling the release candidate and rerunning HOME.
     $finalSmoke = Capture-Scenario "candidate" $CandidateApk "home" $true
     $completed = $true
-    [PSCustomObject]@{
-        snapshotName = $SnapshotName
-        serial = $Serial
-        userId = $UserId
-        baselineArtifacts = $baselineArtifacts
-        candidateArtifacts = $candidateArtifacts
-        finalSmokeArtifact = $finalSmoke
-        comparisons = $comparisonResults
-        passed = $true
-    } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runDir "run.json") -Encoding utf8
+    Write-RunArtifact -Status "passed"
     Write-Output (Resolve-Path -LiteralPath $runDir).Path
+} catch {
+    $failureMessage = $_.Exception.Message
+    throw
 } finally {
     if (-not $completed) {
-        Restore-Snapshot
+        try {
+            Restore-Snapshot
+        } finally {
+            Write-RunArtifact -Status "failed" -ErrorMessage $failureMessage
+        }
     }
 }

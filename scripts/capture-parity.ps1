@@ -66,6 +66,19 @@ function Get-Aapt2 {
     return $aapt.FullName
 }
 
+function Dismiss-InitialUserNotice {
+    # The development AVD may show CarService's KitchenSink user notice on the first
+    # activity launch. It belongs to the image, not Car Launcher, and would otherwise
+    # obscure both golden screenshots. Detect it through the accessibility tree and
+    # dismiss only when the exact button is present.
+    & adb -s $Serial shell uiautomator dump /sdcard/car_launcher_parity_notice.xml | Out-Null
+    $noticeXml = (& adb -s $Serial exec-out cat /sdcard/car_launcher_parity_notice.xml) -join ""
+    if ($noticeXml -match "Dismiss for now") {
+        & adb -s $Serial shell input tap 1476 582 | Out-Null
+        Start-Sleep -Milliseconds 500
+    }
+}
+
 if (-not (Test-Path -LiteralPath $ApkPath)) {
     throw "APK is missing: $ApkPath"
 }
@@ -119,6 +132,7 @@ if ($LaunchScenario) {
     & adb -s $Serial shell $scenarioCommand |
         Set-Content -LiteralPath (Join-Path $outputDir "launch-$Scenario.txt")
     Start-Sleep -Seconds 2
+    Dismiss-InitialUserNotice
 }
 
 $commands = [ordered]@{

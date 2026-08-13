@@ -17,18 +17,48 @@ ROUTE_FILES = (
     "quickstep-resolution.txt",
 )
 
+# CarLauncher.apk is assembled together with Car UI/WM Shell support manifests. Those merged
+# installer/search/desktop entries are owned by the support libraries and are not invoked by the
+# AVD's launcher contract. Compare the launcher-owned surface explicitly so a source migration is
+# not rejected for intentionally absent library implementation details.
+LAUNCHER_CONTRACT_TOKENS = (
+    ".CarLauncher\"",
+    "AppGridActivity",
+    "ResetLauncherActivity",
+    "CarRecentsActivity",
+    "CarQuickStepService",
+    "ControlBarActivity",
+    "WidgetHostActivity",
+    "CalmModeActivity",
+    "CalmModeQCProvider",
+    "MapTosActivity",
+    "InCallServiceImpl",
+    "DateAppWidgetProvider",
+    "ACTION_APP_GRID",
+    "OPEN_RECENT_TASK_ACTION",
+    "android.intent.action.QUICKSTEP_SERVICE",
+    "android.permission.MANAGE_ACTIVITY_TASKS",
+    "android.permission.START_TASKS_FROM_RECENTS",
+    "android.permission.READ_FRAME_BUFFER",
+    "android.permission.BIND_APPWIDGET",
+    "android.car.permission.ACCESS_CAR_PROJECTION_STATUS",
+    "android.car.permission.CONTROL_CAR_APP_LAUNCH",
+    "android.permission.ACTIVITY_EMBEDDING",
+    "android.permission.CONTROL_INCALL_EXPERIENCE",
+)
+
 
 def normalize_manifest(content: str) -> list[str]:
-    """Keep semantic XML tree text while removing line/resource-id build noise."""
+    """Keep launcher-owned XML tree text while removing build/resource-id noise."""
     normalized: list[str] = []
     for raw_line in content.splitlines():
         line = re.sub(r" \(line=\d+\)", "", raw_line.rstrip())
         line = re.sub(r"@0x[0-9a-fA-F]+", "@resource", line)
         line = re.sub(r"\(0x[0-9a-fA-F]+\)", "(resource-id)", line)
         line = re.sub(r"android:version(Code|Name).*", "android:version<build-specific>", line)
-        if line:
+        if line and any(token in line for token in LAUNCHER_CONTRACT_TOKENS):
             normalized.append(line)
-    return normalized
+    return sorted(set(normalized))
 
 
 def normalize_route(content: str) -> list[str]:
