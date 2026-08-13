@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape>
+            <corners android:radius="18dp" />
+            <solid android:color="@color/app_grid_focus_surface" />
+            <stroke
+                android:width="5dp"
+                android:color="@color/app_grid_focus_border" />
+        </shape>
+    </item>
     <item android:state_pressed="true">
         <shape>
             <corners android:radius="18dp" />

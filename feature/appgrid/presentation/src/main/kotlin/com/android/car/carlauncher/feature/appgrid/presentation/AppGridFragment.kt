@@ -28,6 +28,7 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     private val showToolbar: Boolean by lazy { resources.getBoolean(R.bool.app_grid_show_toolbar) }
     private var binding: FragmentAppGridBinding? = null
     private lateinit var adapter: AppGridAdapter
+    private var initialFocusRequested = false
 
     override fun onViewCreated(
         view: View,
@@ -99,6 +100,7 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
 
     override fun onDestroyView() {
         binding = null
+        initialFocusRequested = false
         super.onDestroyView()
     }
 
@@ -109,6 +111,12 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     private fun render(state: AppGridUiState) {
         val currentBinding = binding ?: return
         adapter.submitItems(state.visibleItems)
+        if (!initialFocusRequested && state.visibleItems.isNotEmpty()) {
+            initialFocusRequested = true
+            currentBinding.appGrid.post {
+                currentBinding.appGrid.getChildAt(0)?.requestFocus()
+            }
+        }
         currentBinding.appGridEmpty.visibility =
             if (state.visibleItems.isEmpty()) {
                 View.VISIBLE
@@ -142,11 +150,12 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
         val layoutManager = recycler.layoutManager as? GridLayoutManager ?: return
         layoutManager.orientation =
             if (orientation == AppGridOrientation.VERTICAL) {
-                RecyclerView.VERTICAL
-            } else {
                 RecyclerView.HORIZONTAL
+            } else {
+                // Stock horizontal App Grid fills five columns before advancing a row.
+                RecyclerView.VERTICAL
             }
-        layoutManager.spanCount = if (orientation == AppGridOrientation.VERTICAL) GRID_COLUMNS else GRID_ROWS
+        layoutManager.spanCount = if (orientation == AppGridOrientation.VERTICAL) GRID_ROWS else GRID_COLUMNS
         recycler.post {
             val availableWidth = recycler.width - recycler.paddingLeft - recycler.paddingRight
             val availableHeight = recycler.height - recycler.paddingTop - recycler.paddingBottom

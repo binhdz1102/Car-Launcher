@@ -39,6 +39,8 @@
     <uses-permission android:name="android.car.permission.CAR_MONITOR_CLUSTER_NAVIGATION_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.BIND_APPWIDGET" />
+    <!-- Stock Car Launcher is a platform/privileged app and discovers all launchable packages. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <queries>
         <!-- A direct adb install is not a priv-app, so explicitly retain the stock launcher

@@ -4,6 +4,7 @@
     android:layout_height="wrap_content"
     android:background="@drawable/app_grid_item"
     android:clickable="true"
+    android:defaultFocusHighlightEnabled="false"
     android:focusable="true"
     android:gravity="center"
     android:minHeight="0dp"

@@ -116,7 +116,7 @@ private object AppGridOrderProto {
             val (messageSize, payloadStart) = bytes.readVarint(0)
             val payloadEnd = (payloadStart + messageSize.toInt()).coerceAtMost(bytes.size)
             var position = payloadStart
-            buildList {
+            buildList<ParsedOrder> {
                 while (position < payloadEnd) {
                     val (tag, next) = bytes.readVarint(position)
                     position = next
@@ -129,7 +129,8 @@ private object AppGridOrderProto {
                         position = bytes.skipField(position, tag.wireType, payloadEnd)
                     }
                 }
-            }
+            }.sortedWith(compareBy<ParsedOrder> { it.relativePosition ?: Int.MAX_VALUE })
+                .map(ParsedOrder::component)
         }.getOrDefault(emptyList())
 
     fun write(
@@ -173,10 +174,11 @@ private object AppGridOrderProto {
         start: Int,
         end: Int,
         userId: Int,
-    ): LauncherComponent? {
+    ): ParsedOrder? {
         var position = start
         var packageName: String? = null
         var className: String? = null
+        var relativePosition: Int? = null
         while (position < end) {
             val (tag, next) = readVarint(position)
             position = next
@@ -195,15 +197,26 @@ private object AppGridOrderProto {
                     position = valueEnd
                 }
 
+                tag.fieldNumber == RELATIVE_POSITION_FIELD && tag.wireType == VARINT -> {
+                    val (value, valueEnd) = readVarint(position)
+                    relativePosition = value.toInt()
+                    position = valueEnd
+                }
+
                 else -> position = skipField(position, tag.wireType, end)
             }
         }
         return if (!packageName.isNullOrBlank() && !className.isNullOrBlank()) {
-            LauncherComponent(packageName, className, userId)
+            ParsedOrder(LauncherComponent(packageName, className, userId), relativePosition)
         } else {
             null
         }
     }
+
+    private data class ParsedOrder(
+        val component: LauncherComponent,
+        val relativePosition: Int?,
+    )
 
     private fun ByteArray.readVarint(initialPosition: Int): Pair<Long, Int> {
         var position = initialPosition

@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.lang.reflect.Method
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -78,6 +79,20 @@ class AndroidAppGridRepository
         private val userId = Process.myUid() / PER_USER_RANGE
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         private val order = MutableStateFlow(emptyList<LauncherComponent>())
+        private val mediaTemplateMethod: Method? by lazy {
+            runCatching {
+                val mediaContext =
+                    context.createPackageContext(
+                        MEDIA_PACKAGE,
+                        Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY,
+                    )
+                mediaContext.classLoader
+                    .loadClass(MEDIA_SOURCE_CLASS)
+                    .getMethod("isMediaTemplate", Context::class.java, ComponentName::class.java)
+            }.onFailure { throwable ->
+                Timber.tag(TAG).w(throwable, "CarMediaApp media-template API unavailable")
+            }.getOrNull()
+        }
 
         private val inventoryChanges: Flow<Unit> =
             combine(
@@ -254,8 +269,7 @@ class AndroidAppGridRepository
                 }
             val recentPackages = recentPackages()
             val media = mediaItems(uxr, carPackageManager, recentPackages, mirroring)
-            val mediaPackages = media.map { it.component.packageName }.toSet()
-            val normal = normalItems(uxr, carPackageManager, recentPackages, mirroring, mediaPackages)
+            val normal = normalItems(uxr, carPackageManager, recentPackages, mirroring)
             val knownPackages = (normal + media).map { it.component.packageName }.toSet()
             val disabled =
                 restrictedItems(
@@ -309,7 +323,6 @@ class AndroidAppGridRepository
             carPackageManager: CarPackageManager?,
             recentPackages: Set<String>,
             mirroring: MirroringSession,
-            mediaPackages: Set<String>,
         ): List<AppGridItem> =
             launcherApps
                 .getActivityList(null, user)
@@ -317,7 +330,6 @@ class AndroidAppGridRepository
                 .filter { activity ->
                     activity.applicationInfo.enabled &&
                         activity.componentName.packageName !in HIDDEN_PACKAGES &&
-                        activity.componentName.packageName !in mediaPackages &&
                         activity.componentName.packageName != context.packageName
                 }.map { activity ->
                     activity.toItem(uxr, carPackageManager, recentPackages, mirroring)
@@ -427,12 +439,21 @@ class AndroidAppGridRepository
             packageManager
                 .queryIntentServices(
                     Intent(MediaBrowserService.SERVICE_INTERFACE),
-                    PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()),
+                    PackageManager.ResolveInfoFlags.of(PackageManager.GET_RESOLVED_FILTER.toLong()),
                 ).filter { info ->
                     info.serviceInfo?.let { service ->
-                        service.enabled && service.exported && service.packageName !in HIDDEN_PACKAGES
+                        service.enabled &&
+                            service.exported &&
+                            service.packageName !in HIDDEN_PACKAGES &&
+                            isMediaTemplate(ComponentName(service.packageName, service.name))
                     } == true
                 }.distinctBy { it.serviceInfo.name }
+
+        /** Resolve the stock CarMediaApp classifier without adding its implementation to the APK. */
+        private fun isMediaTemplate(component: ComponentName): Boolean =
+            runCatching {
+                mediaTemplateMethod?.invoke(null, context, component) as? Boolean
+            }.getOrNull() ?: false
 
         private fun restrictedActivities(
             setting: String,
@@ -663,6 +684,8 @@ class AndroidAppGridRepository
             const val TOS_BANNER_DISMISS_TIME_KEY = "TOS_BANNER_DISMISS_TIME"
             const val ACTION_SHOW_USER_TOS = "com.android.car.SHOW_USER_TOS_ACTIVITY"
             const val EXTRA_TOS_SHOW_VALUE_PROP = "show_value_prop"
+            const val MEDIA_PACKAGE = "com.android.car.media"
+            const val MEDIA_SOURCE_CLASS = "com.android.car.media.common.source.MediaSource"
             const val RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1_000L
             const val MAX_RECENT_PACKAGES = 6
             val HIDDEN_PACKAGES = setOf("com.android.permissioncontroller", "com.android.systemui")
