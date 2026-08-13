@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 37 Automotive_Device_FullHD stock split: 400dp media panel and 16dp gutters. -->
+    <dimen name="home_media_panel_width">400dp</dimen>
+</resources>

@@ -13,7 +13,6 @@ object AppGridStateReducer {
             .distinctBy { it.component.flattened }
             .sortedWith(
                 compareBy<AppGridItem> { orderIndex[it.component.flattened] ?: Int.MAX_VALUE }
-                    .thenByDescending(AppGridItem::isRecent)
                     .thenBy { it.label.lowercase() },
             )
     }

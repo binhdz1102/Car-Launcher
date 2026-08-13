@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Overlayable product configuration consumed through the application resource table. -->
+    <!-- Stock CarAppGrid disables the toolbar; search/reorder remain state-machine features. -->
+    <bool name="app_grid_show_toolbar">false</bool>
     <bool name="use_vertical_app_grid">false</bool>
-    <bool name="config_enable_tos_banner">true</bool>
 </resources>

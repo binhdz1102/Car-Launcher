@@ -41,6 +41,12 @@
     <uses-permission android:name="android.permission.BIND_APPWIDGET" />
 
     <queries>
+        <!-- A direct adb install is not a priv-app, so explicitly retain the stock launcher
+             visibility contract for all launchable activities. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <intent>
             <action android:name="android.media.browse.MediaBrowserService" />
         </intent>

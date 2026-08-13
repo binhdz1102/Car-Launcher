@@ -2,14 +2,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    android:background="@drawable/app_grid_tile"
+    android:background="@drawable/app_grid_item"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center"
-    android:minHeight="176dp"
+    android:minHeight="0dp"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="0dp">
 
     <ImageView
         android:id="@+id/app_grid_icon"
@@ -22,12 +21,12 @@
         android:id="@+id/app_grid_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="16dp"
         android:ellipsize="end"
         android:gravity="center"
-        android:maxLines="2"
+        android:maxLines="1"
         android:textColor="@color/app_grid_text_primary"
-        android:textSize="18sp" />
+        android:textSize="28sp" />
 
     <TextView
         android:id="@+id/app_grid_reason"

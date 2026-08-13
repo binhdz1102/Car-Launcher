@@ -9,14 +9,14 @@ import org.junit.Test
 
 class AppGridStateReducerTest {
     @Test
-    fun arrange_keepsSavedOrderThenRecentThenAlphabetical() {
+    fun arrange_keepsSavedOrderThenAlphabetical() {
         val media = item("media", AppGridItemType.MEDIA_SERVICE, recent = false)
         val recent = item("recent", AppGridItemType.ACTIVITY, recent = true)
         val alpha = item("alpha", AppGridItemType.ACTIVITY, recent = false)
 
         val result = AppGridStateReducer.arrange(listOf(alpha, recent, media), listOf(media.component.flattened))
 
-        assertEquals(listOf(media, recent, alpha), result)
+        assertEquals(listOf(media, alpha, recent), result)
     }
 
     @Test

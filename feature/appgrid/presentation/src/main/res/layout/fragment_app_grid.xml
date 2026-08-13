@@ -4,8 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/app_grid_background"
-    android:paddingHorizontal="56dp"
-    android:paddingVertical="24dp">
+    android:paddingHorizontal="70dp"
+    android:paddingVertical="0dp">
 
     <TextView
         android:id="@+id/app_grid_title"
@@ -122,9 +122,8 @@
         android:id="@+id/app_grid"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
         android:clipToPadding="false"
-        android:paddingBottom="20dp"
+        android:paddingBottom="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

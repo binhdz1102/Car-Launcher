@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     private val viewModel: AppGridViewModel by viewModels()
+    private val showToolbar: Boolean by lazy { resources.getBoolean(R.bool.app_grid_show_toolbar) }
     private var binding: FragmentAppGridBinding? = null
     private lateinit var adapter: AppGridAdapter
 
@@ -35,6 +36,12 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
         super.onViewCreated(view, savedInstanceState)
         val currentBinding = FragmentAppGridBinding.bind(view)
         binding = currentBinding
+        if (!showToolbar) {
+            currentBinding.appGridTitle.visibility = View.GONE
+            currentBinding.appGridClose.visibility = View.GONE
+            currentBinding.appGridSearch.visibility = View.GONE
+            currentBinding.appGridReorder.visibility = View.GONE
+        }
 
         adapter =
             AppGridAdapter(
@@ -108,11 +115,13 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
             } else {
                 View.GONE
             }
-        currentBinding.appGridSearch.visibility = if (state.canSearch) View.VISIBLE else View.GONE
+        currentBinding.appGridSearch.visibility =
+            if (showToolbar && state.canSearch) View.VISIBLE else View.GONE
         if (!state.canSearch && currentBinding.appGridSearch.text.isNotEmpty()) {
             currentBinding.appGridSearch.text?.clear()
         }
-        currentBinding.appGridReorder.visibility = if (state.canReorder) View.VISIBLE else View.GONE
+        currentBinding.appGridReorder.visibility =
+            if (showToolbar && state.canReorder) View.VISIBLE else View.GONE
         currentBinding.appGridReorder.text =
             getString(if (state.isReorderMode) R.string.app_grid_done_reordering else R.string.app_grid_reorder)
         currentBinding.tosBanner.visibility =
@@ -211,7 +220,8 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     companion object {
         private const val ARG_MODE = "mode"
         private const val GRID_COLUMNS = 5
-        private const val GRID_ROWS = 3
+        // The stock API 37 launcher allocates four rows in the 1920x1080 app-grid surface.
+        private const val GRID_ROWS = 4
         private const val DEFAULT_DISPLAY_ID = 0
 
         fun newInstance(mode: AppGridMode): AppGridFragment = fragment(newArguments(mode))
