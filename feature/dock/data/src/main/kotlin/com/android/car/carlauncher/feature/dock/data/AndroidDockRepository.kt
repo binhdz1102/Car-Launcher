@@ -8,6 +8,8 @@ import android.os.UserHandle
 import com.android.car.carlauncher.core.model.LauncherComponent
 import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
 import com.android.car.carlauncher.feature.dock.domain.DockItem
+import com.android.car.carlauncher.feature.dock.domain.DockItemKind
+import com.android.car.carlauncher.feature.dock.domain.DockPolicy
 import com.android.car.carlauncher.feature.dock.domain.DockRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +40,12 @@ class AndroidDockRepository
                                 component = component.copy(userId = currentUserId()),
                                 position = index,
                                 isMediaApp = component.flattened in mediaServices.value,
+                                kind =
+                                    if (component.flattened in mediaServices.value) {
+                                        DockItemKind.MEDIA
+                                    } else {
+                                        DockItemKind.STATIC
+                                    },
                             )
                         }
                     }
@@ -50,21 +58,20 @@ class AndroidDockRepository
             runCatching {
                 check(featureFlags.dockFeature) { "Dock feature is disabled" }
                 require(position >= 0) { "Dock position must be non-negative" }
-                val current = orderStore.order.first().toMutableList()
-                current.removeAll { it.flattened == component.flattened }
-                current.add(
-                    position.coerceAtMost(current.size),
-                    component.copy(userId = currentUserId()),
+                val current = orderStore.order.first()
+                orderStore.writeOrder(
+                    DockPolicy.pin(
+                        current,
+                        component.copy(userId = currentUserId()),
+                        position,
+                    ),
                 )
-                orderStore.writeOrder(current)
             }
 
         override suspend fun unpin(component: LauncherComponent): Result<Unit> =
             runCatching {
                 check(featureFlags.dockFeature) { "Dock feature is disabled" }
-                orderStore.writeOrder(
-                    orderStore.order.first().filterNot { it.flattened == component.flattened },
-                )
+                orderStore.writeOrder(DockPolicy.unpin(orderStore.order.first(), component))
             }
 
         private fun currentUserId(): Int =

@@ -93,8 +93,6 @@ dependencies {
     implementation(project(":feature:calmmode:domain"))
     implementation(project(":feature:calmmode:presentation"))
     implementation(project(":feature:widgets"))
-    implementation(project(":feature:dock:data"))
-    implementation(project(":feature:dock:presentation"))
     // The AOSP application links CarAppGrid-lib as a static library; retain its resource and
     // public contract in the standalone application as well.
     implementation(project(":libraries:appgrid"))

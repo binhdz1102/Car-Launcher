@@ -58,4 +58,5 @@ include(":libraries:dock")
 include(":libraries:dock-util")
 include(":libraries:launcher-common")
 include(":test-apps:fixture-app")
+include(":test-apps:dock-host")
  

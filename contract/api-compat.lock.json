@@ -41,7 +41,17 @@
       "name": "dock",
       "candidateFiles": [
         "libraries/dock/src/main/kotlin/com/android/car/docklib/DockInterface.kt",
-        "libraries/dock/src/main/kotlin/com/android/car/docklib/data/DockItemId.kt"
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/DockViewController.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/ExcludedItemsProvider.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/ResourceExcludedItemsProvider.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/data/DockAppItem.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/data/DockItemId.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/events/DockEventsReceiver.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/events/DockPackageChangeReceiver.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/media/MediaUtils.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/task/TaskUtils.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/view/DockAdapter.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/view/DockView.kt"
       ],
       "symbols": [
         "interface DockInterface",
@@ -51,10 +61,20 @@
         "fun appLaunched",
         "fun launchApp",
         "fun getIconColorWithScrim",
-        "fun getMediaServiceComponents"
+        "fun getMediaServiceComponents",
+        "class DockViewController",
+        "class DockAppItem",
+        "enum class Type",
+        "class DockEventsReceiver",
+        "class DockPackageChangeReceiver",
+        "object MediaUtils",
+        "fun fetchMediaServiceComponents",
+        "object TaskUtils",
+        "class DockAdapter",
+        "class DockView"
       ],
       "sourceFiles": 22,
-      "portedFiles": 2,
+      "portedFiles": 13,
       "status": "partial-port"
     },
     {
