@@ -27,6 +27,7 @@ Chuỗi bắt đầu tại tag `audit-remediation-start-20260814` trên `main`:
 10. `9425eec` Calm Mode, WidgetHost và Date widget
 11. `d2a9800` behavior Dock và sample host
 12. `4085451` codec order rollback-safe và parity harness đầy đủ
+13. `1ba8712` static gate cuối, lint permission platform và media cleanup
 
 API/library lock vẫn ghi `partial-port` khi AOSP chưa được port đủ. Vì vậy
 seam pass không bị hiểu nhầm là parity hành vi hoàn chỉnh.
@@ -37,7 +38,7 @@ seam pass không bị hiểu nhầm là parity hành vi hoàn chỉnh.
 - Unit test data AppGrid/Dock và ktlint: **PASS**
 - Resource contract: **PASS** (354 overlayable app + 120 AppGrid)
 - Verify release APK: **PASS**; SHA-256
-  `f8a083e01de5e24a40442cf2fb7a99702ad23dde9952718ce7cd71888b864bb8`
+  `24727a8b1472b20ec7395cb677d302d42ad91cb3ddb116aa133a85b6e49f0a82`
 - Nghiệm thu full AVD parity: **CHƯA ĐẠT**
 
 Run mới nhất tại `artifacts/parity/audit-run-home` dừng trước bước so sánh

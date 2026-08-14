@@ -18,7 +18,7 @@ baseline evidence.
 | --- | --- |
 | Package | `com.android.car.carlauncher` |
 | Baseline SHA-256 | `17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5` |
-| Candidate release SHA-256 | `f8a083e01de5e24a40442cf2fb7a99702ad23dde9952718ce7cd71888b864bb8` |
+| Candidate release SHA-256 | `24727a8b1472b20ec7395cb677d302d42ad91cb3ddb116aa133a85b6e49f0a82` |
 | Certificate | `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8` |
 | Target | API 37 / user 10 / `emulator-5554` |
 

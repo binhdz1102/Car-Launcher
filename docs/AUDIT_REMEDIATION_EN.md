@@ -28,6 +28,7 @@ kept on `main`:
 10. `9425eec` Calm Mode, WidgetHost and Date widget lifecycle
 11. `d2a9800` Dock library behavior and sample host
 12. `4085451` rollback-safe order codecs and full parity harness
+13. `1ba8712` final static-gate fixes, platform permission lint contracts and media cleanup
 
 The library/API locks intentionally report `partial-port` where the complete
 AOSP implementation is not yet present. This prevents a passing seam check
@@ -41,7 +42,7 @@ Static verification completed after the remediation slices:
 - AppGrid/Dock/data unit tests and ktlint: **PASS**
 - Resource contract: **PASS** (354 app + 120 AppGrid overlayable items)
 - Release APK verification: **PASS**; SHA-256
-  `f8a083e01de5e24a40442cf2fb7a99702ad23dde9952718ce7cd71888b864bb8`
+  `24727a8b1472b20ec7395cb677d302d42ad91cb3ddb116aa133a85b6e49f0a82`
 - Full AVD parity acceptance: **NOT ACCEPTED**
 
 The latest run under `artifacts/parity/audit-run-home` stopped before candidate
