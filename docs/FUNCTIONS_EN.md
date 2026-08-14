@@ -55,8 +55,10 @@ com.android.car.carlauncher/.AppGridActivity. Its activity uses singleInstance
 like the stock APK.
 
 LauncherApps supplies current-user activities, while declared
-MediaBrowserService queries supply media tiles. QUERY_ALL_PACKAGES is not
-requested. The RecyclerView provides:
+MediaBrowserService queries supply media tiles. `QUERY_ALL_PACKAGES` is kept
+because the AOSP CarLauncher contract inventories all launchable car packages;
+the permission is locally suppressed in lint with an explanatory comment. The
+RecyclerView provides:
 
 - a Navigation tile;
 - icons, labels and activity/media launch;
@@ -124,15 +126,17 @@ granted after the update installation.
 - app assembles platform entry points and compatibility contracts;
 - Hilt supplies dependencies, while Coroutines/Flow replace polling and
   manually-managed workers;
-- Java/Kotlin 17, minSdk 34, compileSdk 36 and targetSdk 36.
+- Java/Kotlin 17, minSdk 34, compileSdk 37 and targetSdk 37.
 
 Room is unnecessary for one small ordered list. An AndroidX navigation graph is
 also unnecessary because the platform enters through fixed activities/actions.
 
 ## Verified boundary
 
-This build provides the functional parity needed to replace the launcher on the
-audited API 37 AVD. It does not claim pixel parity with every DEWD/OEM overlay.
+This migration is still under audit and is not accepted as a replacement:
+the current AVD run has functional gaps and failed strict screenshot parity.
+Acceptance requires the gates in `TEST_REPORT_EN.md` and the complete
+source/API/resource matrix.
 The AVD has one real occupant display; a trusted 1280x720 overlay display
 verified layout/routing but cannot replace a passenger occupant-zone test on
 multi-display hardware. The image also lacks a real Telecom call and a

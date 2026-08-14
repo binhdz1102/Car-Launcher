@@ -1,8 +1,8 @@
 package com.android.car.carlauncher.homescreen
 
 import android.car.settings.CarSettings
-import android.database.ContentObserver
 import android.content.Intent
+import android.database.ContentObserver
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -15,8 +15,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.android.car.carlauncher.R
 import com.android.car.carlauncher.core.ui.applySystemBarInsets
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
  * terms. A content-observer adapter feeds this lifecycle-owned Flow so settings changes are
  * reflected without a polling Handler or a stale activity state.
  */
+@Suppress("TooManyFunctions")
 class MapTosActivity : AppCompatActivity() {
     private lateinit var reviewButton: TextView
 
@@ -45,7 +46,8 @@ class MapTosActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 tosReviewRequired.collect { required ->
-                    reviewButton.visibility = if (required) TextView.VISIBLE else TextView.GONE
+                    reviewButton.visibility =
+                        if (required) TextView.VISIBLE else TextView.GONE
                     if (required) {
                         reviewButton.setText(R.string.map_tos_review_button_text)
                     }
@@ -54,33 +56,31 @@ class MapTosActivity : AppCompatActivity() {
         }
     }
 
-    private val tosReviewRequired = callbackFlow {
-        val observer =
-            object : ContentObserver(Handler(Looper.getMainLooper())) {
-                override fun onChange(selfChange: Boolean) {
-                    trySend(readTosReviewRequired())
+    private val tosReviewRequired =
+        callbackFlow {
+            val observer =
+                object : ContentObserver(Handler(Looper.getMainLooper())) {
+                    override fun onChange(selfChange: Boolean) {
+                        trySend(readTosReviewRequired())
+                    }
                 }
-            }
-        contentResolver.registerContentObserver(
-            Settings.Secure.getUriFor(CarSettings.Secure.KEY_UNACCEPTED_TOS_DISABLED_APPS),
-            false,
-            observer,
-        )
-        contentResolver.registerContentObserver(
-            Settings.Secure.getUriFor(CarSettings.Secure.KEY_USER_TOS_ACCEPTED),
-            false,
-            observer,
-        )
-        trySend(readTosReviewRequired())
-        awaitClose { contentResolver.unregisterContentObserver(observer) }
-    }.distinctUntilChanged()
+            contentResolver.registerContentObserver(
+                Settings.Secure.getUriFor(CarSettings.Secure.KEY_UNACCEPTED_TOS_DISABLED_APPS),
+                false,
+                observer,
+            )
+            contentResolver.registerContentObserver(
+                Settings.Secure.getUriFor(CarSettings.Secure.KEY_USER_TOS_ACCEPTED),
+                false,
+                observer,
+            )
+            trySend(readTosReviewRequired())
+            awaitClose { contentResolver.unregisterContentObserver(observer) }
+        }.distinctUntilChanged()
 
     private fun readTosReviewRequired(): Boolean =
         Settings.Secure
-            .getString(
-                contentResolver,
-                CarSettings.Secure.KEY_UNACCEPTED_TOS_DISABLED_APPS,
-            )
+            .getString(contentResolver, CarSettings.Secure.KEY_UNACCEPTED_TOS_DISABLED_APPS)
             .orEmpty()
             .split(TOS_SEPARATOR)
             .any(String::isNotBlank)

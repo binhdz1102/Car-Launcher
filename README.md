@@ -58,7 +58,7 @@ architecture document. Hilt, ViewModel, Coroutines/Flow, lifecycle-aware
 collection, DataStore, DiffUtil and explicit state machines are used at their
 appropriate boundaries.
 
-Build settings are Java/Kotlin 17, minSdk 34, compileSdk 36 and targetSdk 36.
+Build settings are Java/Kotlin 17, minSdk 34, compileSdk 37 and targetSdk 37.
 The implementation is verified on Android 17/API 37.
 
 ## Build

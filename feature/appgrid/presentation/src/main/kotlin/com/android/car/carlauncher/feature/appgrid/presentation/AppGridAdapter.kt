@@ -2,8 +2,8 @@ package com.android.car.carlauncher.feature.appgrid.presentation
 
 import android.content.ComponentName
 import android.content.Context
-import android.graphics.Color
 import android.content.pm.LauncherApps
+import android.graphics.Color
 import android.os.Process
 import android.view.LayoutInflater
 import android.view.View
@@ -132,9 +132,11 @@ class AppGridAdapter(
                 else -> {
                     // Stock AppGridRepository obtains activity icons from LauncherActivityInfo,
                     // including the profile badge/density normalization of getBadgedIcon(0).
-                    val launcherInfo = context.getSystemService(LauncherApps::class.java)
-                        ?.getActivityList(component.packageName, Process.myUserHandle())
-                        ?.firstOrNull { it.componentName == component }
+                    val launcherInfo =
+                        context
+                            .getSystemService(LauncherApps::class.java)
+                            ?.getActivityList(component.packageName, Process.myUserHandle())
+                            ?.firstOrNull { it.componentName == component }
                     launcherInfo?.getBadgedIcon(0)
                         ?: context.packageManager.getActivityInfo(component, 0).loadIcon(context.packageManager)
                 }

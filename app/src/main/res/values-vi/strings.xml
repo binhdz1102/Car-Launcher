@@ -6,8 +6,10 @@
     <string name="recents_clear_all">Xóa tất cả</string>
     <string name="calm_mode_title">Chế độ tĩnh</string>
     <string name="calm_mode_close">Đóng chế độ tĩnh</string>
-    <string name="map_fallback_message">Chưa thể dẫn đường cho tới khi ứng dụng bản đồ được cấu hình.</string>
-    <string name="widget_empty">Chưa cấu hình tiện ích cho launcher.</string>
+    <string name="map_fallback_message">Chưa thể dẫn đường tới khi ứng dụng bản đồ được cấu hình.</string>
+    <string name="map_tos_review_button_text">Bản đồ bị tắt. Chưa chấp nhận điều khoản dịch vụ</string>
+    <string name="map_tos_review_button_distraction_optimized_text">Bản đồ bị tắt. Hãy xem lại sau khi lái xe.</string>
+    <string name="widget_empty">Chưa cấu hình tiện ích cho trình khởi chạy.</string>
     <string name="reset_appgrid_title">Đặt lại lưới ứng dụng theo thứ tự A–Z</string>
     <string name="reset_appgrid_dialogue_message">Thao tác này sẽ xóa toàn bộ thứ tự tùy chỉnh. Bạn có muốn tiếp tục không?</string>
 </resources>

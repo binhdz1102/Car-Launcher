@@ -53,8 +53,9 @@ com.android.car.carlauncher/.AppGridActivity. Activity dùng singleInstance gi�
 APK stock.
 
 Danh sách lấy từ LauncherApps của user hiện tại và các MediaBrowserService được
-công bố. Không dùng QUERY_ALL_PACKAGES; intent query tối thiểu vẫn phát hiện đúng
-media service trên AVD. RecyclerView hỗ trợ:
+công bố. `QUERY_ALL_PACKAGES` được giữ vì hợp đồng AOSP CarLauncher lập danh
+mục toàn bộ ứng dụng có thể khởi chạy; permission này được suppress cục bộ
+trong lint với chú thích giải thích. RecyclerView hỗ trợ:
 
 - tile Navigation;
 - icon, label và thao tác mở activity/media app;
@@ -117,15 +118,17 @@ granted sau khi cài đè.
 - presentation dùng ViewModel, immutable UI state và lifecycle-aware Flow;
 - app chỉ lắp ghép entry point/framework contract;
 - Hilt quản lý dependency; Coroutines/Flow thay polling và worker thread tự quản;
-- Java/Kotlin 17, minSdk 34, compileSdk 36, targetSdk 36.
+- Java/Kotlin 17, minSdk 34, compileSdk 37, targetSdk 37.
 
 Room không phù hợp với một chuỗi thứ tự nhỏ; AndroidX Navigation không cần thiết
 vì platform đi vào app bằng activity/action cố định.
 
 ## Ranh giới xác nhận
 
-Bản này đạt parity chức năng cần thiết để thay launcher trên đúng AVD API 37 đã
-audit. Không khẳng định pixel parity với mọi DEWD/OEM overlay. AVD chỉ có một
+Bản migration này vẫn đang trong giai đoạn audit và chưa được nghiệm thu để
+thay launcher: run hiện tại còn thiếu chức năng và fail strict screenshot parity.
+Việc nghiệm thu phải đạt các release gate trong `TEST_REPORT_VI.md` và ma trận
+source/API/resource đầy đủ. AVD chỉ có một
 occupant display thật; overlay display 1280x720 đã kiểm tra layout/routing nhưng
 chưa thay thế được bài test passenger occupant-zone trên phần cứng nhiều màn
 hình. Không có cuộc gọi Telecom thật hoặc media provider giàu metadata trong

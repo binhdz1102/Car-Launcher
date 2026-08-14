@@ -22,6 +22,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 /** Feature-owned XML App Grid hosted by the stable app-level `AppGridActivity` component. */
+@Suppress("TooManyFunctions")
 @AndroidEntryPoint
 class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     private val viewModel: AppGridViewModel by viewModels()
@@ -111,18 +112,35 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     private fun render(state: AppGridUiState) {
         val currentBinding = binding ?: return
         adapter.submitItems(state.visibleItems)
-        if (!initialFocusRequested && state.visibleItems.isNotEmpty()) {
-            initialFocusRequested = true
-            currentBinding.appGrid.post {
-                currentBinding.appGrid.getChildAt(0)?.requestFocus()
-            }
-        }
+        requestInitialFocus(currentBinding, state)
+        renderContentVisibility(currentBinding, state)
+        renderToolbar(currentBinding, state)
+        renderTosBanner(currentBinding, state)
+        renderTitle(currentBinding, state.mode)
+        configureGrid(state.state?.orientation ?: AppGridOrientation.HORIZONTAL)
+    }
+
+    private fun requestInitialFocus(
+        currentBinding: FragmentAppGridBinding,
+        state: AppGridUiState,
+    ) {
+        if (initialFocusRequested || state.visibleItems.isEmpty()) return
+        initialFocusRequested = true
+        currentBinding.appGrid.post { currentBinding.appGrid.getChildAt(0)?.requestFocus() }
+    }
+
+    private fun renderContentVisibility(
+        currentBinding: FragmentAppGridBinding,
+        state: AppGridUiState,
+    ) {
         currentBinding.appGridEmpty.visibility =
-            if (state.visibleItems.isEmpty()) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
+            if (state.visibleItems.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    private fun renderToolbar(
+        currentBinding: FragmentAppGridBinding,
+        state: AppGridUiState,
+    ) {
         currentBinding.appGridSearch.visibility =
             if (showToolbar && state.canSearch) View.VISIBLE else View.GONE
         if (!state.canSearch && currentBinding.appGridSearch.text.isNotEmpty()) {
@@ -130,20 +148,33 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
         }
         currentBinding.appGridReorder.visibility =
             if (showToolbar && state.canReorder) View.VISIBLE else View.GONE
-        currentBinding.appGridReorder.text =
-            getString(if (state.isReorderMode) R.string.app_grid_done_reordering else R.string.app_grid_reorder)
+        currentBinding.appGridReorder.text = getString(reorderLabel(state.isReorderMode))
+    }
+
+    private fun renderTosBanner(
+        currentBinding: FragmentAppGridBinding,
+        state: AppGridUiState,
+    ) {
         currentBinding.tosBanner.visibility =
             if (state.state?.shouldShowTosBanner == true) View.VISIBLE else View.GONE
+    }
+
+    private fun renderTitle(
+        currentBinding: FragmentAppGridBinding,
+        mode: AppGridMode,
+    ) {
         currentBinding.appGridTitle.setText(
-            when (state.mode) {
+            when (mode) {
                 AppGridMode.ALL_APPS -> R.string.app_grid_title
                 AppGridMode.MEDIA_ONLY,
                 AppGridMode.MEDIA_POPUP,
                 -> R.string.app_grid_media_title
             },
         )
-        configureGrid(state.state?.orientation ?: AppGridOrientation.HORIZONTAL)
     }
+
+    private fun reorderLabel(isReorderMode: Boolean): Int =
+        if (isReorderMode) R.string.app_grid_done_reordering else R.string.app_grid_reorder
 
     private fun configureGrid(orientation: AppGridOrientation) {
         val recycler = binding?.appGrid ?: return
@@ -229,6 +260,7 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     companion object {
         private const val ARG_MODE = "mode"
         private const val GRID_COLUMNS = 5
+
         // The stock API 37 launcher allocates four rows in the 1920x1080 app-grid surface.
         private const val GRID_ROWS = 4
         private const val DEFAULT_DISPLAY_ID = 0
