@@ -60,6 +60,19 @@ class ManifestNormalizerTest(unittest.TestCase):
             self.assertFalse(result["passed"])
             self.assertEqual(result["candidateOnlyCount"], 1)
 
+    def test_ui_normalizer_ignores_volatile_indexes_but_keeps_bounds(self) -> None:
+        baseline = (
+            '<hierarchy><node index="0" drawing-order="1" resource-id="pkg:id/apps_grid" '
+            'class="android.widget.GridView" text="" content-desc="" bounds="[0,0][10,10]" '
+            'enabled="true" focusable="true" clickable="false" scrollable="true" /></hierarchy>'
+        )
+        candidate = baseline.replace('index="0"', 'index="9"').replace('drawing-order="1"', 'drawing-order="7"')
+        self.assertEqual(MODULE.normalize_ui(baseline), MODULE.normalize_ui(candidate))
+        self.assertNotEqual(
+            MODULE.normalize_ui(baseline),
+            MODULE.normalize_ui(candidate.replace('[0,0][10,10]', '[0,0][11,10]')),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

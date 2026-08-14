@@ -7,12 +7,14 @@ import argparse
 import json
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Callable
 
 
 MANIFEST_FILE = "manifest.xmltree.txt"
 RESOURCE_FILE = "resources.txt"
+UI_FILE = "window.xml"
 ROUTE_FILES = (
     "home-resolution.txt",
     "app-grid-resolution.txt",
@@ -21,7 +23,8 @@ ROUTE_FILES = (
 
 BUILD_SPECIFIC = re.compile(
     r"(android:version(?:Code|Name)|android:compileSdkVersion(?:Codename)?|"
-    r"platformBuildVersion(?:Code|Name))(?:\([^)]*\))?=.*"
+    r"android:minSdkVersion|android:targetSdkVersion|platformBuildVersion(?:Code|Name))"
+    r"(?:\([^)]*\))?(?:@resource)?=.*"
 )
 LINE_NUMBER = re.compile(r"\s+\(line=\d+\)")
 RESOURCE_ID = re.compile(r"@0x[0-9a-fA-F]+|\(0x[0-9a-fA-F]+\)")
@@ -53,6 +56,38 @@ def normalize_resources(content: str) -> list[str]:
 
 def normalize_route(content: str) -> list[str]:
     return [line.strip() for line in content.splitlines() if line.strip()]
+
+
+def normalize_ui(content: str) -> list[str]:
+    """Compare resource-addressable semantic nodes and their rendered bounds.
+
+    uiautomator assigns volatile indexes and drawing orders, so those fields are intentionally
+    excluded. Resource ids, class, text/content descriptions and interaction flags are part of the
+    public UI contract and must remain stable. Nodes without a resource id are framework wrappers
+    and are not useful parity anchors.
+    """
+    root = ET.fromstring(content)
+    nodes: list[str] = []
+    for node in root.iter("node"):
+        attributes = node.attrib
+        resource_id = attributes.get("resource-id", "")
+        if not resource_id:
+            continue
+        if ":id/" in resource_id:
+            resource_id = resource_id.split(":id/", 1)[1]
+        fields = (
+            resource_id,
+            attributes.get("class", ""),
+            attributes.get("text", ""),
+            attributes.get("content-desc", ""),
+            attributes.get("bounds", ""),
+            attributes.get("enabled", ""),
+            attributes.get("focusable", ""),
+            attributes.get("clickable", ""),
+            attributes.get("scrollable", ""),
+        )
+        nodes.append("|".join(fields))
+    return sorted(nodes)
 
 
 def compare_file(
@@ -120,6 +155,7 @@ def main() -> int:
     comparisons = [
         compare_file(arguments.baseline_dir, arguments.candidate_dir, MANIFEST_FILE, normalize_manifest),
         compare_file(arguments.baseline_dir, arguments.candidate_dir, RESOURCE_FILE, normalize_resources),
+        compare_file(arguments.baseline_dir, arguments.candidate_dir, UI_FILE, normalize_ui),
         *[
             compare_file(arguments.baseline_dir, arguments.candidate_dir, route, normalize_route)
             for route in ROUTE_FILES
