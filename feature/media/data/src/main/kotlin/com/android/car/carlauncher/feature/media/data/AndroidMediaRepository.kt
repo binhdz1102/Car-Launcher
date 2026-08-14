@@ -14,6 +14,7 @@ import android.media.session.PlaybackState
 import android.os.SystemClock
 import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
 import com.android.car.carlauncher.feature.media.domain.MediaCustomAction
 import com.android.car.carlauncher.feature.media.domain.MediaHistoryItem
@@ -59,6 +60,7 @@ class AndroidMediaRepository
         private val carConnection: CarServiceConnection,
         private val artworkCache: MediaArtworkCache,
         @param:ApplicationScope private val repositoryScope: CoroutineScope,
+        private val dispatchers: CoroutineDispatchers,
         private val featureFlags: LauncherFeatureFlags,
     ) : MediaRepository {
         private val sessionManager = context.getSystemService(MediaSessionManager::class.java)
@@ -97,10 +99,10 @@ class AndroidMediaRepository
             }
 
         init {
-            repositoryScope.launch {
+            repositoryScope.launch(dispatchers.main) {
                 activeSessionEvents().collect { chooseActiveController() }
             }
-            repositoryScope.launch {
+            repositoryScope.launch(dispatchers.main) {
                 carConnection.car
                     .flatMapLatest(::mediaSourceEvents)
                     .collectLatest { manager ->
@@ -109,7 +111,7 @@ class AndroidMediaRepository
                         if (controller == null) chooseActiveController()
                     }
             }
-            repositoryScope.launch {
+            repositoryScope.launch(dispatchers.main) {
                 controllerEvents.collect { event ->
                     when (event) {
                         ControllerEvent.Refresh -> refreshPlayback()
@@ -149,7 +151,7 @@ class AndroidMediaRepository
             runCatching {
                 checkNotNull(carMediaManager) { "Car media manager is unavailable" }
                     .setMediaSource(component, CarMediaManager.MEDIA_SOURCE_MODE_PLAYBACK)
-                repositoryScope.launch {
+                repositoryScope.launch(dispatchers.main) {
                     delay(SOURCE_SWITCH_REFRESH_DELAY_MS)
                     refreshSources()
                     chooseActiveController()
