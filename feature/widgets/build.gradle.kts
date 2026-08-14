@@ -13,4 +13,5 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.coroutines.android)
     implementation(libs.timber)
+    testImplementation(libs.junit)
 }

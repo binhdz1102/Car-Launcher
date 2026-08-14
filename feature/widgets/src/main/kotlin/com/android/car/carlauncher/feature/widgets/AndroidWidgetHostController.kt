@@ -56,7 +56,7 @@ class AndroidWidgetHostController
 
         override suspend fun unbind(): Result<Unit> =
             runCatching {
-                mutableState.value = mutableState.value.copy(isBound = false, appWidgetId = null)
+                mutableState.value = WidgetHostLifecycleReducer.stopped(mutableState.value)
             }
 
         private fun configuredProviders(): Set<String> =

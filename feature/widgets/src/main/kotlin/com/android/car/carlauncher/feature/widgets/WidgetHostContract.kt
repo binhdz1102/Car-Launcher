@@ -10,6 +10,16 @@ data class WidgetHostState(
     val providerCount: Int = 0,
 )
 
+/** State transition rules used when the Activity is stopped and later rebound. */
+object WidgetHostLifecycleReducer {
+    fun stopped(state: WidgetHostState): WidgetHostState = state.copy(isBound = false)
+
+    fun started(
+        state: WidgetHostState,
+        display: DisplayTarget,
+    ): WidgetHostState = state.copy(display = display)
+}
+
 /** Boundary for AppWidgetHost side effects, kept out of the HOME presenter. */
 interface WidgetHostController {
     val state: StateFlow<WidgetHostState>

@@ -6,27 +6,35 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
-import java.text.SimpleDateFormat
-import java.util.Date
+import com.android.car.carlauncher.feature.widgets.DateWidgetFormatter
+import java.time.Clock
+import java.time.ZoneId
 import java.util.Locale
 
 class DateAppWidgetProvider : AppWidgetProvider() {
+    private val clock: Clock = Clock.systemUTC()
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
         appWidgetIds.forEach { widgetId ->
-            val now = Date()
+            val text =
+                DateWidgetFormatter.format(
+                    instant = clock.instant(),
+                    zoneId = ZoneId.systemDefault(),
+                    locale = Locale.getDefault(),
+                )
             val views =
                 RemoteViews(context.packageName, R.layout.date_widget).apply {
                     setTextViewText(
                         R.id.day_of_week_textview,
-                        SimpleDateFormat("EEEE", Locale.getDefault()).format(now),
+                        text.dayOfWeek,
                     )
                     setTextViewText(
                         R.id.date_textview,
-                        SimpleDateFormat("MMMM d", Locale.getDefault()).format(now),
+                        text.date,
                     )
                 }
             appWidgetManager.updateAppWidget(widgetId, views)
@@ -51,6 +59,8 @@ class DateAppWidgetProvider : AppWidgetProvider() {
                 Intent.ACTION_DATE_CHANGED,
                 Intent.ACTION_TIME_CHANGED,
                 Intent.ACTION_TIMEZONE_CHANGED,
+                Intent.ACTION_LOCALE_CHANGED,
+                Intent.ACTION_CONFIGURATION_CHANGED,
             )
     }
 }
