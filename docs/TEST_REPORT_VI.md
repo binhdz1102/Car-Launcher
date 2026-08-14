@@ -1,105 +1,52 @@
-# Báo cáo audit và kiểm thử Car Launcher trên AVD
+# Báo cáo test audit Car Launcher
 
-Ngày kiểm thử: 2026-08-13
-Baseline: `Launcher/apk/CarLauncher.apk`
-Full parity run: `artifacts/parity/run-20260813-204544` (Git ignore)
+Ngày ghi nhận: 2026-08-14. Baseline là
+`Launcher/apk/CarLauncher.apk` đã khóa; artifact thô nằm trong thư mục bị
+Git ignore.
 
 ## Kết luận
 
-Migration đã tương thích component và chức năng trên AVD API 37 được audit; APK
-release ký platform cài được dưới dạng update `/data/app`. Tuy nhiên **chưa được
-nghiệm thu là replacement pixel-parity**: golden gate full fail ở HOME, App Grid,
-Recents, Widget Host và Map ToS. Calm Mode đã được sửa sau run này và pass so
-sánh tập trung có mask. Các khác biệt UI còn lại là khác biệt layout/style thật,
-không che bằng cách hạ ngưỡng gate.
+Migration hiện có release build ký platform và nhiều feature slice đã được
+test. **Chưa được nghiệm thu thay thế launcher stock**. AVD run mới nhất dừng ở
+baseline HOME vì cửa sổ launcher phát sinh ANR thật (`Input dispatching timed
+out`). Runner fail-closed đã restore snapshot và không so candidate với
+baseline không hợp lệ.
 
-## Môi trường và identity
+## Identity đã khóa
 
-| Thuộc tính | Giá trị |
+| Mục | Giá trị |
 | --- | --- |
-| Serial / user | `emulator-5554` / 10 |
-| API / fingerprint | 37 / `Android/sdk_car_mysystemapp_x86_64/emulator_car64_x86_64:Baklava/CP2A.260605.016/eng.binh:userdebug/test-keys` |
-| Màn hình | 1920x1080, density 213 |
 | Package | `com.android.car.carlauncher` |
-| Stock | versionCode 37, `/system/priv-app/CarLauncher` |
-| Candidate | versionCode 1000, `custom-dev`, update `/data/app` |
 | SHA-256 baseline | `17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5` |
+| SHA-256 candidate release | `f8a083e01de5e24a40442cf2fb7a99702ad23dde9952718ce7cd71888b864bb8` |
 | Certificate | `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8` |
-| SHA-256 release candidate | `2d1ff232432bb8bc44cd27bcec380b5ca7c14840627fe26418d23b2876d7935c` |
-| Snapshot | `car_launcher_parity_ready` |
+| Target | API 37 / user 10 / `emulator-5554` |
 
-## Build và quality tĩnh
+## Gate đã hoàn thành
 
-Các kiểm tra sau pass sau thay đổi App Grid và parity harness:
+- Kotlin compile, release APK và AndroidTest APK: **PASS**
+- Test codec order AppGrid/Dock round-trip và fallback truncated/corrupt:
+  **PASS**
+- Test Dock policy và sample host: **PASS**
+- ktlint module thay đổi và verify release: **PASS**
+- Resource overlayable contract: **PASS** (354 + 120 item)
+- Nghiệm thu connected AVD parity: **CHƯA CHẠY XONG**
 
-```text
-./gradlew :feature:calmmode:data:ktlintCheck
-         :feature:calmmode:presentation:ktlintCheck
-         :feature:calmmode:data:detekt
-         :feature:calmmode:presentation:detekt
-         :app:lintDebug testDebugUnitTest --console=plain --max-workers=2
-./gradlew :app:assembleRelease --console=plain --max-workers=2
-```
+## Bằng chứng AVD
 
-Certificate release được kiểm bởi `scripts/verify-release-apk.ps1`; không in
-credential. Artifact release bàn giao có SHA-256
-`2d1ff232432bb8bc44cd27bcec380b5ca7c14840627fe26418d23b2876d7935c`.
+Run mới nhất là `artifacts/parity/audit-run-home/run-20260814-105014/run.json`.
+Baseline HOME bị đánh dấu `INVALID` với lý do log có fatal/ANR/security; logcat
+ghi nhận launcher ANR. Runner đã kiểm fixture, task topology và instrumentation
+6 test trước khi dừng. Điều này chứng minh guard hoạt động, không chứng minh
+parity ảnh hay hành vi.
 
-## Contract parity
+Run lịch sử `artifacts/parity/run-20260813-204544` chỉ dùng làm bằng chứng fail
+trước remediation, không dùng làm release gate.
 
-`compare-parity-contract.py` trả `passed: true` cho cả sáu scenario trong full
-run. So sánh gồm manifest token thuộc launcher và resolution HOME, App Grid,
-QuickStep cho user 10.
+## Gate phát hành còn lại
 
-| Scenario | Contract | Screenshot full run | SSIM | Pixel khác biệt |
-| --- | --- | --- | ---: | ---: |
-| HOME | Pass | Fail | 0,6913 | 19,3307% |
-| App Grid | Pass | Fail | 0,2184 | 11,4891% |
-| Recents | Pass | Fail | 0,6913 | 19,3307% |
-| Calm Mode (trước fix cuối) | Pass | Fail | 0,3561 | 1,3904% |
-| Widget Host | Pass | Fail | 0,4249 | 4,2803% |
-| Map ToS | Pass | Fail | 0,2278 | 90,4382% |
-
-Follow-up Calm Mode đổi window sang translucent, khớp nền đen và giữ control bar
-SystemUI. Capture tập trung sạch tại
-`artifacts/parity/20260813-211333-candidate-calm-mode`, so với stock bằng mask
-clock/date theo guide, đạt `SSIM 1.0` và `differentPixelRatio 0.0`; contract
-cũng pass.
-
-Foreground harness đã được ổn định bằng cách dừng các fixture task nền đã biết
-và launch App Grid bằng component tường minh. Contract App Grid sau thay đổi
-khớp inventory, thứ tự row-major và bounds của stock (20 entry); kiểm tra hình
-tập trung vẫn cần mask focus/icon theo guide và chưa đạt strict SSIM gate, nên
-đây là bằng chứng capture xác định chứ chưa phải nghiệm thu.
-
-## Bằng chứng chức năng trên AVD
-
-| Khu vực | Kết quả | Bằng chứng |
-| --- | --- | --- |
-| HOME và map TaskView | Pass spot check | callbackFlow CarService/SystemUI đạt ready; surface Maps Placeholder xuất hiện và đã kiểm reconnect. |
-| Media và home card | Pass spot check | fixture media source/session, playback control và empty card render. |
-| App Grid | Pass chức năng | discovery, search, reorder persistence, reset A-Z, shortcut và action App Grid. |
-| UXR khi lái | Pass | search/reorder bị hạn chế, tile non-DO bị disable khi lái; Park khôi phục. |
-| Recents/QuickStep | Pass chức năng | app-switch mở `CarRecentsActivity`; snapshot/open/remove/clear và QuickStep resolution hoạt động. |
-| Calm Mode QC/activity | Pass | QC mở activity translucent; date, clock, nhiệt độ, media và control bar render. |
-| WidgetHost/Date widget | Pass chức năng | Hilt bind ID hợp lệ và Date widget render. |
-| Map ToS | Pass chức năng | explicit activity mở và Apps route sang App Grid. |
-| Dock và persistence | Pass unit/contract | protobuf codec, DataStore dual-write và event contract pass. |
-| Secondary display | Pass có giới hạn | overlay tin cậy display 2 nhận App Grid đúng routing; chưa phải phần cứng occupant-zone. |
-
-## Ghi chú ổn định
-
-Smoke sạch mới nhất đã clear logcat, force-stop package rồi start Calm Mode; không
-có `FATAL EXCEPTION`, `SecurityException` hay lỗi process launcher. Một artifact
-full run trước đó có race khi AVD đang cập nhật package (NPE
-`ConfigurationController` lúc rebind process cũ), không phải lỗi tương tác màn
-hình. Sau restart lỗi không lặp lại, nhưng release gate nên chạy lại full matrix
-từ snapshot mới restore và logcat sạch.
-
-## Việc còn lại và điều kiện nghiệm thu
-
-Replacement có thể tiếp tục dùng cho test chức năng và phát triển rollback-safe.
-Chưa được gọi pixel-parity hoàn chỉnh cho đến khi HOME media/map layout, visual
-App Grid stock, Recents, WidgetHost và Map ToS đạt SSIM >= 0,98 và <= 2% pixel
-khác biệt. Run nghiệm thu tiếp theo cũng phải có logcat sạch và record SHA/cert
-release.
+Sau khi sửa nguyên nhân ANR/setup baseline, chạy full matrix sáu scenario ba lần
+từ snapshot sạch. Mọi capture phải `PASS`, contract diff bằng 0 ngoài version/
+build được cho phép, tất cả case TaskView/UXR/media/Recents/WidgetHost/Dock và
+rollback dữ liệu phải chạy, screenshot đạt SSIM >= 0.98 và pixel khác biệt <= 2%.
+Chỉ để candidate trên AVD sau smoke cuối pass.

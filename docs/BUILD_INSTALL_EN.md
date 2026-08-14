@@ -2,88 +2,84 @@
 
 ## Prerequisites
 
-- Windows PowerShell, JDK 17 and the repository Gradle wrapper.
-- Android SDK with API 37/build-tools and `adb` on `PATH`.
-- A matching AOSP output tree and the local platform libraries. Do not commit
-  either the `Launcher/` reference or generated platform artifacts.
-- A booted API 37 AVD whose fingerprint and user 10 match `baseline.lock.json`.
+- Windows PowerShell, JDK 17, Android SDK/build-tools for API 37 and `adb`.
+- The matching local AOSP platform jars. `Launcher/` is reference-only and is
+  never committed.
+- A booted API 37 AVD with user 10 and the locked fingerprint in
+  `baseline.lock.json`.
 
-## Sync and verify platform artifacts
+## Sync and verify local artifacts
 
-The source build consumes `android.car.jar`, `framework.jar`, SystemUI shared,
-WindowManager Shell and car-qc jars from the matching AOSP output. Synchronize
-them into the ignored `platform-artifacts/api-37` directory:
+Platform artifacts are copied to the ignored `platform-artifacts/api-37` tree:
 
 ```powershell
 .\scripts\sync-platform-artifacts.ps1 `
-  -AospOut D:\path\to\out-avd-car-mysystemapp `
-  -PlatformLibrariesDirectory D:\path\to\My-System-App\libs\platform
+  -AospOut D:\path\to\aosp\out `
+  -PlatformLibrariesDirectory D:\path\to\platform-libs
 .\scripts\verify-platform-artifacts.ps1 -VerifyDevice -Serial emulator-5554
 .\scripts\verify-baseline.ps1 -VerifyDevice -Serial emulator-5554
 ```
 
-The sync command writes the ignored bundle and `platform-artifacts.lock.json`.
-Every checksum must be regenerated from the same AOSP output; never substitute
-a jar from another API level. `baseline.lock.json` fixes the original APK SHA-256,
-certificate, package, version and AVD fingerprint.
+The commands verify checksums, baseline SHA-256, package/version and the
+platform certificate without printing keystore credentials.
 
-## Build and verify the APK
+## Build and static gates
 
 ```powershell
-.\gradlew.bat ktlintCheck detekt lintDebug testDebugUnitTest `
-  :app:assembleDebug :app:assembleRelease --console=plain --max-workers=2
+.\gradlew.bat ktlintCheck detekt lintDebug testDebugUnitTest verifyApiCompat `
+  :app:assembleDebug :app:assembleRelease :app:assembleAndroidTest `
+  --no-daemon --console=plain --max-workers=2
 .\scripts\verify-release-apk.ps1 `
   -ApkPath app\build\outputs\apk\release\app-release.apk
 ```
 
-The release output must be signed by certificate
-`c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8`. The script
-prints the artifact SHA-256 without logging any keystore secret.
+The release certificate must be
+`c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8`.
 
-## Install as the launcher update
-
-Use the checked installer so package path and user are verified:
+## Install the candidate
 
 ```powershell
-.\scripts\install-avd.ps1 -Serial emulator-5554 -UserId 10 -Build
-```
-
-Or install an already-built release explicitly:
-
-```powershell
-adb -s emulator-5554 install --no-streaming -r `
+adb -s emulator-5554 install --no-streaming -r --user 10 `
   app\build\outputs\apk\release\app-release.apk
 adb -s emulator-5554 shell am start --user 10 -W `
   -a android.intent.action.MAIN -c android.intent.category.HOME `
   -n com.android.car.carlauncher/.CarLauncher
 ```
 
-`pm path` must show `/data/app/...`; the original remains in
-`/system/priv-app/CarLauncher`. Release uses the platform certificate, so an
-APK signed by a different key must not be installed over the stock package.
+Verify that `pm path` points to `/data/app/...`; the stock package remains in
+`/system/priv-app/CarLauncher`. A different signing key is not acceptable.
 
-## Baseline comparison before acceptance
+## Run baseline parity
 
-Install deterministic fixtures, create the named snapshot once, then run the
-full baseline/candidate matrix:
+Install fixture apps and save the recovery snapshot once:
 
 ```powershell
 .\scripts\run-parity.ps1 -CreateSnapshot -InstallFixtures `
-  -FixtureApk test-apps\fixture\build\outputs\apk\debug\fixture-debug.apk
-.\scripts\run-parity.ps1 `
-  -CandidateApk app\build\outputs\apk\release\app-release.apk
+  -FixtureApk test-apps\fixture-app\build\outputs\apk\debug\fixture-app-debug.apk
 ```
 
-The runner restores `car_launcher_parity_ready` before each label, captures all
-six scenarios, writes `run.json` and restores the snapshot on failure. A pass
-also reinstalls the release candidate and performs a final HOME smoke. See the
-[parity guide](AVD_PARITY_GUIDE_EN.md) for masks and acceptance thresholds.
+Build the AndroidTest APK, then run the full matrix. The instrumentation APK is
+required unless `-SkipInstrumentation` is explicitly used for a non-acceptance
+smoke:
 
-## Restore the original APK
+```powershell
+.\gradlew.bat :app:assembleAndroidTest --no-daemon --console=plain
+.\scripts\run-parity.ps1 `
+  -CandidateApk app\build\outputs\apk\release\app-release.apk `
+  -InstrumentationApk app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
+```
+
+The runner restores `car_launcher_parity_ready` for every label and scenario,
+clears all logcat buffers, checks fixtures/foreground/task topology, runs
+instrumentation, captures UI hierarchy and screenshots, and restores the
+snapshot on `INVALID` or comparison failure. A pass also reinstalls release and
+runs final HOME smoke. See [AVD_PARITY_GUIDE_EN.md](AVD_PARITY_GUIDE_EN.md).
+
+## Restore the stock APK
 
 ```powershell
 .\scripts\install-avd.ps1 -Serial emulator-5554 -UserId 10 -RestoreBaseline
 ```
 
-The command verifies the locked baseline first and installs it with `-r -d`.
-For a complete rollback procedure, see [ROLLBACK_EN.md](ROLLBACK_EN.md).
+The command verifies the locked baseline before installing it with `-r -d`.
+For rollback by tag/commit, see [ROLLBACK_EN.md](ROLLBACK_EN.md).

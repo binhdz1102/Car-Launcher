@@ -1,36 +1,37 @@
-# Ma trận migrate
+# Ma trận source-to-feature và test
 
-`Launcher/` chỉ dùng làm tham khảo và không bao giờ được commit. Bảng dưới ánh
-xạ khu vực chức năng sang boundary của replacement và bằng chứng trên AVD API 37.
+`Launcher/` là source AOSP tham khảo và không được commit. Mỗi dòng có trạng
+thái `ported`, `equivalent test` hoặc `open`; dòng `open` không phải evidence
+nghiệm thu.
 
-| Khu vực source tham khảo | Module thay thế | Contract/bằng chứng chính |
+| Khu vực AOSP | Boundary candidate | Trạng thái/evidence |
 | --- | --- | --- |
-| `CarLauncher` HOME, map và task card | `feature:home:*`, `core:platform`, `app` | HOME resolution, clean boot, Maps Placeholder TaskView và reconnect |
-| Media card/source/session | `feature:media:*`, `feature:home:presentation` | fixture media browser, playback/source action và collect state HOME |
-| Call, projection, assistive card | `feature:home:*`, `compat` | contract component/permission và empty-card trên AVD |
-| App Grid, search, shortcut, reorder | `feature:appgrid:*`, `libraries:appgrid` | action App Grid, search, drag persistence, reset và UXR khi lái |
-| ToS / map fallback | `app` (`MapTosActivity`) | explicit activity và Apps route sang App Grid |
-| Recents và QuickStep | `feature:recents:*`, `core:platform`, `app` | app-switch, snapshot, open/remove/clear và QuickStep resolution |
-| Calm Mode fragment/activity/QC | `feature:calmmode:*`, `app` | provider, nhiệt độ, translucent window và masked SSIM 1.0 |
-| Date widget / WidgetHost | `feature:widgets`, `app` | Hilt host và Date widget render; strict visual vẫn khác |
-| Dock library, event và order | `feature:dock:*`, `libraries:dock*`, `libraries:launcher-common` | protobuf codec, DataStore dual-write và event contract |
-| Car callback và SystemUI bridge | `core:platform`, `core:common`, `compat` | adapter callbackFlow, reconnect state và manifest permission |
-| Sample/fixture host | `test-apps:fixture` | input deterministic cho media, map, widget và launcher |
+| HOME, map TaskView, display passenger | `feature:home:*`, `app` | Port lifecycle seam và Flow callback; AVD acceptance còn mở |
+| Media/session và home card | `feature:media:*`, `feature:launcher:presentation` | Port state source/session/card; fixture matrix còn mở |
+| Call, projection, assistive/weather | `feature:home:*`, `compat` | Port data contract; full UI/priority matrix còn mở |
+| App Grid, paging, search, reorder, UXR | `feature:appgrid:*`, `libraries:appgrid` | Paging/UXR/persistence test pass; full visual/action matrix còn mở |
+| ToS, mirroring và shortcut | `feature:appgrid:*`, `app` | Port intent/reducer seam; AVD matrix còn mở |
+| Recents và QuickStep | `feature:recents:*`, `app` | Horizontal task flow/binder compile; multi-task AVD matrix còn mở |
+| Calm Mode QC/activity | `feature:calmmode:*`, `app` | Gate/config/locale/provider test pass; AVD acceptance còn mở |
+| WidgetHost và Date widget | `feature:widgets`, `app` | Rebind/time/locale reducer test pass; AVD acceptance còn mở |
+| Dock library, event và sample host | `libraries:dock*`, `feature:dock:*` | Policy/codec/API seam/host build pass; AOSP API đầy đủ còn mở |
+| Launcher common/public API | `libraries:launcher-common` | Compatibility lock ghi rõ partial-port |
+| Fixture và instrumentation | `test-apps:fixture-app`, `app/src/androidTest` | Fixture và 6 contract test build; action scenario còn mở |
 
-## Quyết định tương thích
+## Quy tắc boundary
 
-- Giữ nguyên package `com.android.car.carlauncher`, tên component công khai,
-  action, authority và launcher-owned permission.
-- Resource ID không cần giống số; runner chuẩn hóa ID do build gán và so sánh
-  token thuộc launcher.
-- Component do support library merge vào APK baseline nhưng SystemUI AVD không
-  resolve sẽ không được copy; boundary được ghi rõ trong contract harness.
-- Persistence được dual-write trong giai đoạn migrate để rollback đọc được file
-  order gốc.
+- Module domain không import Android. Scope/dispatcher được inject; `Handler` chỉ
+  nằm trong adapter callback Android bắt buộc.
+- App launcher là composition root. Dock library không được đóng gói vào app
+  khi host AOSP sở hữu Dock.
+- App order đọc/ghi cả DataStore và `files/order.data`; Dock order dual-write
+  DataStore cùng protobuf stock. Input hỏng fallback an toàn, không xóa file.
+- Thay đổi package, component, action, authority, permission hoặc display routing
+  phải được review contract; numeric resource ID có thể khác.
 
-## Parity còn lại
+## Dòng acceptance còn mở
 
-Full run chứng minh manifest/routing tương thích ở cả sáu scenario, nhưng strict
-screenshot gate chưa đạt cho HOME, App Grid, Recents, Widget Host và Map ToS. Các
-surface này còn XML composition đơn giản hơn styling DEWD/card/grid của stock.
-Không hạ ngưỡng SSIM để che phần việc visual này.
+Các dòng còn lại cần chạy AVD API 37/user 10 sạch, API dump đầy đủ, evidence
+parity ba lần và ngưỡng screenshot trong
+[AVD_PARITY_GUIDE_VI.md](AVD_PARITY_GUIDE_VI.md). Không đổi sang `ported` chỉ vì
+unit test hoặc token manifest pass.

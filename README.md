@@ -5,12 +5,11 @@ com.android.car.carlauncher. It keeps the public component, permission, signing,
 HOME, SystemUI, QuickStep, widget and Settings contracts used by the matching
 AOSP Automotive image while using a modern multi-module implementation.
 
-For the exact development AVD documented below, the component and functional
-audit passes and the APK can be installed as a `/data/app` update. Strict
-baseline screenshot parity is still open for HOME, App Grid, Recents, Widget
-Host and Map ToS; therefore this repository does not yet claim pixel-identical
-replacement. Calm Mode is now contract- and visually aligned after masking
-dynamic clock/date regions.
+The package contract, platform signing and several feature slices are migrated,
+and the APK can be installed as a `/data/app` update. This is not yet an
+accepted stock replacement: the current AVD run is fail-closed because the
+baseline HOME capture produced an ANR, and strict screenshot parity remains
+open for all surfaces until a clean three-run matrix passes.
 
 ## Replacement status
 
@@ -51,6 +50,7 @@ The implementation covers:
 - [Build and install (EN)](docs/BUILD_INSTALL_EN.md) / [VI](docs/BUILD_INSTALL_VI.md)
 - [AVD parity procedure (EN)](docs/AVD_PARITY_GUIDE_EN.md) / [VI](docs/AVD_PARITY_GUIDE_VI.md)
 - [Rollback (EN)](docs/ROLLBACK_EN.md) / [VI](docs/ROLLBACK_VI.md)
+- [Audited remediation status (EN)](docs/AUDIT_REMEDIATION_EN.md) / [VI](docs/AUDIT_REMEDIATION_VI.md)
 - [Latest test report (EN)](docs/TEST_REPORT_EN.md) / [VI](docs/TEST_REPORT_VI.md)
 
 The full module graph and MVVM/Clean boundaries are maintained in the
@@ -73,14 +73,15 @@ The standalone build uses platform artifacts from this AOSP workspace:
 
 Run the complete local quality gate:
 
-~~~bash
-bash ./gradlew   ktlintCheck detekt lintDebug testDebugUnitTest   :app:assembleDebug :app:assembleRelease   --console=plain --max-workers=2
+~~~powershell
+.\gradlew.bat ktlintCheck detekt lintDebug testDebugUnitTest verifyApiCompat `
+  :app:assembleDebug :app:assembleRelease --console=plain --max-workers=2
 ~~~
 
 Run the component contract tests on a booted AVD:
 
-~~~bash
-bash ./gradlew :app:connectedDebugAndroidTest   --console=plain --max-workers=2
+~~~powershell
+.\gradlew.bat :app:connectedDebugAndroidTest --console=plain --max-workers=2
 ~~~
 
 The connected test task temporarily installs and then removes the target APK.
@@ -141,8 +142,11 @@ adb -s emulator-5554 shell am start -W   -n com.android.car.carlauncher/.ResetLa
 Direct AVD results, including UXR injection, SystemUI integration, TaskView,
 recents snapshots, reset ordering and the secondary-display check, are recorded
 in [the English test report](docs/TEST_REPORT_EN.md) and
-[the Vietnamese test report](docs/TEST_REPORT_VI.md). The latest full parity
-run is under `artifacts/parity/run-20260813-204544` (ignored by Git).
+[the Vietnamese test report](docs/TEST_REPORT_VI.md). The retained
+pre-remediation failure is under `artifacts/parity/run-20260813-204544`; the
+latest audit attempt is under `artifacts/parity/audit-run-home` and is
+`INVALID` because the baseline HOME log window contains an AVD ANR. These
+artifact directories are ignored by Git and are not acceptance evidence.
 
 The exact AVD only exposes one physical occupant display. A trusted 1280x720
 overlay display verified display routing and responsive layout, but it is not a
@@ -155,6 +159,7 @@ also product UI choices, not missing contracts on this AVD.
 To replace the development update with the original matching APK:
 
 ~~~bash
-adb -s emulator-5554 install -r -d   "/home/binh/Desktop/aosp/custom-system-apps/original system apks/CarLauncher.apk"
+adb -s emulator-5554 install --no-streaming -r -d `
+  "Launcher\apk\CarLauncher.apk"
 adb -s emulator-5554 shell am force-stop com.android.car.carlauncher
 ~~~

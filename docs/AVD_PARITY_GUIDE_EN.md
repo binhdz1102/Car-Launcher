@@ -1,85 +1,50 @@
 # AVD baseline parity guide
 
-## Locked inputs
+## Locked test input
 
 The official baseline is `Launcher/apk/CarLauncher.apk` with SHA-256
-`17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5` and the
-platform certificate recorded in `baseline.lock.json`. The supported device is
-serial `emulator-5554`, API 37, user 10, with snapshot
+`17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5`. The
+target is API 37/user 10 on `emulator-5554`; the recovery snapshot is
 `car_launcher_parity_ready`.
 
-`Launcher/`, `platform-artifacts/` and `artifacts/` are ignored. The first
-command below refuses to run a destructive suite when the snapshot is absent:
+## Required procedure
+
+1. Verify baseline, platform artifacts, device boot and fixture APKs.
+2. Save and load the snapshot. If save/load fails, stop; do not run a
+   destructive suite.
+3. Restore the snapshot before every scenario and install baseline with
+   `adb install --no-streaming -r -d --user 10`.
+4. Restore again, install the platform-signed release candidate, and run the
+   identical scenario and instrumentation.
+5. Compare screenshots, UI hierarchy, task/display topology and full manifest,
+   permission, component, query, routing and overlayable contracts.
+6. Restore on any failure. On a pass, reinstall release and run final HOME
+   smoke.
+
+The canonical command is:
 
 ```powershell
-.\scripts\verify-baseline.ps1 -VerifyDevice -Serial emulator-5554
-.\scripts\run-parity.ps1 -CandidateApk app\build\outputs\apk\release\app-release.apk
+.\scripts\run-parity.ps1 `
+  -CandidateApk app\build\outputs\apk\release\app-release.apk `
+  -InstrumentationApk app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
 ```
 
-## Deterministic procedure
+The runner covers HOME, App Grid, Recents, Calm Mode, WidgetHost and Map ToS.
+Each `capture.json` records `preconditions`, `actions`, `assertions`,
+`taskTopology`, `instrumentation` and `logWindow`. `PASS` requires the expected
+foreground component, fixture readiness, no duplicate map task, no fatal/ANR/
+`SecurityException`, and passing instrumentation. Missing fixture, wrong
+foreground or invalid topology is `INVALID` and cannot be compared.
 
-1. Install fixture APKs and create/save the snapshot. If save/load cannot be
-   validated, stop; do not run the destructive suite.
-2. Restore the snapshot before **every** scenario and capture the baseline with
-   `adb install -r -d`.
-3. Restore the same snapshot before every scenario and install the platform-signed
-   candidate release.
-4. Run exactly the same six scenarios: HOME, App Grid, Recents, Calm Mode,
-   Widget Host and Map ToS.
-5. Compare screenshots and launcher-owned manifest/routing artifacts.
-6. On any failure restore the snapshot. On a pass reinstall the candidate and
-   run the final HOME smoke.
+## Screenshot and contract gates
 
-`run-parity.ps1` automates this sequence and writes a run directory containing
-`run.json`, one folder per scenario, APK badging, manifest XML tree, dumpsys
-activity/window/display, UI hierarchy, screenshot and a cleared 3000-line
-logcat window. Each capture also records `preconditions`, `actions`,
-`assertions`, `taskTopology`, `instrumentation` and `logWindow` in
-`capture.json`.
+The image comparator uses RGB tolerance 16, SSIM >= 0.98 and <= 2% different
+pixels. Only clock/date, artwork and thumbnail regions may be masked; layout,
+TaskView and component differences may not be masked. Contract comparison
+normalizes line numbers, numeric resource IDs and build version fields only.
 
-Capture status is fail-closed:
-
-- `PASS` means the expected component was top-resumed and the isolated log
-  window has no fatal exception, ANR or security exception.
-- `INVALID` means a scenario precondition failed (wrong foreground component,
-  baseline crash, missing artifact or unsafe topology). It is never compared or
-  counted as a parity pass; the runner restores the snapshot and writes the
-  invalid reason to `run.json`.
-
-## Comparison rules
-
-The contract runner compares the complete merged manifest/resource/API contract;
-launcher-owned components, permissions, actions and user-10 resolution for HOME,
-App Grid and QuickStep are mandatory. Build-assigned resource IDs and line
-numbers are normalized, but component attributes, metadata, properties,
-queries, authorities, permissions and overlayable/public names are not ignored.
-Support-library entries are allowed only when the baseline/candidate ownership
-manifest explicitly records the same owner and version.
-
-The screenshot gate uses RGB pixel tolerance 16, global SSIM >= 0.98 and at most
-2% different pixels. Masks may remove dynamic clock/date, artwork, thumbnails or
-other explicitly documented non-deterministic regions; do not mask a layout or
-component difference. Example Calm Mode comparison:
-
-```powershell
-python scripts\compare-parity.py `
-  <baseline>\screen.png <candidate>\screen.png `
-  --ignore-rect 760,0,420,100 `
-  --ignore-rect 560,330,820,400
-python scripts\compare-parity-contract.py <baseline> <candidate>
-```
-
-## Required behavioral coverage
-
-- clean HOME boot, map TaskView appear/update/remove/reconnect;
-- App Grid vertical list, recent/search/reorder, TOS, mirroring and Park/Drive UXR;
-- media source, queue/history, call/projection/assistive cards;
-- Recents/QuickStep snapshot, open, remove and clear;
-- Calm Mode QC, clock/date/temperature/media and translucent control bar;
-- WidgetHost and Date widget;
-- Dock order/events, secondary display routing and release install/restore.
-
-The latest full run is `artifacts/parity/run-20260813-204544`. Its contract
-comparisons passed for all six scenarios; screenshot comparisons failed for
-HOME, App Grid, Recents, Widget Host and Map ToS because the replacement UI is
-not yet pixel-identical. Do not report that run as an acceptance pass.
+The resource lock requires 354 app overlayable items and 120 AppGrid items.
+API-compat and resource verification must run before the AVD suite. No report
+may call an `INVALID` run a pass. The current audit evidence is
+`artifacts/parity/audit-run-home/run-20260814-105014/run.json`; it is invalid
+because the baseline HOME log window contains an AVD launcher ANR.

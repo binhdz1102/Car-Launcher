@@ -1,39 +1,37 @@
-# Migration matrix
+# Source-to-feature and test matrix
 
-`Launcher/` is reference-only and is never committed. The table maps its
-functional areas to the replacement boundaries and the evidence available on
-the API 37 AVD.
+`Launcher/` is the AOSP reference and is never committed. A row is marked
+`ported`, `equivalent test`, or `open`; an open row is not acceptance evidence.
 
-| Reference area | Replacement module(s) | Main contract/evidence |
+| AOSP area | Candidate boundary | Current status/evidence |
 | --- | --- | --- |
-| `CarLauncher` HOME, map and task cards | `feature:home:*`, `core:platform`, `app` | HOME resolution, clean boot, Maps Placeholder TaskView and reconnect spot checks |
-| Media card/source/session | `feature:media:*`, `feature:home:presentation` | fixture media browser, playback/source actions and home state collection |
-| Call, projection and assistive cards | `feature:home:*`, `compat` | component/permission contract and empty-card rendering on AVD |
-| App Grid, search, shortcuts and reorder | `feature:appgrid:*`, `libraries:appgrid` | App Grid action, search, drag persistence, reset and UXR driving checks |
-| ToS / map fallback | `app` (`MapTosActivity`) | explicit activity and Apps action route to App Grid |
-| Recents and QuickStep | `feature:recents:*`, `core:platform`, `app` | app-switch, snapshot, open/remove/clear and QuickStep resolution |
-| Calm Mode fragment/activity/QC | `feature:calmmode:*`, `app` | provider binding, temperature, translucent window and masked visual SSIM 1.0 |
-| Date widget / WidgetHost | `feature:widgets`, `app` | Hilt host creation and Date widget render; latest strict visual gate still differs |
-| Dock libraries, events and order | `feature:dock:*`, `libraries:dock*`, `libraries:launcher-common` | protobuf codec, DataStore dual-write and event contracts |
-| Car callbacks and SystemUI bridge | `core:platform`, `core:common`, `compat` | callbackFlow adapters, reconnect state and manifest permissions |
-| Sample/fixture hosts | `test-apps:fixture` | deterministic media, maps, widget and launcher inputs |
+| HOME, map TaskView, passenger display | `feature:home:*`, `app` | Ported lifecycle seam and Flow callbacks; AVD acceptance open |
+| Media/session and home cards | `feature:media:*`, `feature:launcher:presentation` | Source/session/card state ported; fixture matrix open |
+| Call, projection, assistive/weather | `feature:home:*`, `compat` | Data contracts ported; full UI/priority matrix open |
+| App Grid, paging, search, reorder, UXR | `feature:appgrid:*`, `libraries:appgrid` | Paging/UXR/persistence tests pass; full visual/action matrix open |
+| ToS, mirroring and shortcuts | `feature:appgrid:*`, `app` | Intent and reducer seams ported; AVD matrix open |
+| Recents and QuickStep | `feature:recents:*`, `app` | Horizontal task flow and binder compile; multi-task AVD matrix open |
+| Calm Mode QC/activity | `feature:calmmode:*`, `app` | Gate/config/locale/provider tests pass; AVD acceptance open |
+| WidgetHost and Date widget | `feature:widgets`, `app` | Rebind and time/locale reducer tests pass; AVD acceptance open |
+| Dock library, events and sample host | `libraries:dock*`, `feature:dock:*` | Policy/codec/API seam and host build pass; complete AOSP API open |
+| Launcher common/public APIs | `libraries:launcher-common` | Compatibility lock is explicit partial-port |
+| Fixture apps and instrumentation | `test-apps:fixture-app`, `app/src/androidTest` | Fixture APK and six contract tests build; full scenario actions open |
 
-## Compatibility decisions
+## Boundary rules
 
-- Package `com.android.car.carlauncher`, public component names, actions,
-  authorities and launcher-owned permissions remain unchanged.
-- Resource IDs are not required to be numerically equal; the contract runner
-  normalizes build-assigned IDs and compares launcher-owned tokens.
-- Stock support-library components merged into the baseline APK are not copied
-  when the AVD SystemUI never resolves them; the boundary is documented in the
-  contract harness.
-- Persistence is dual-written during migration so a rollback can read the
-  original order files.
+- Domain modules do not import Android. Application scope and dispatchers are
+  injected; `Handler` is limited to mandatory Android callback adapters.
+- The launcher app is the composition root. Dock library code is not packaged
+  into the launcher when the AOSP host owns Dock.
+- App order reads/writes both DataStore and stock `files/order.data`; Dock order
+  dual-writes DataStore and the stock protobuf. Malformed input falls back
+  without deleting the source file.
+- Package, component, action, authority, permission and display-routing changes
+  require an explicit contract review. Numeric resource IDs may differ.
 
-## Remaining parity work
+## Open acceptance rows
 
-The full run proves manifest/routing compatibility for all six scenarios, but
-the strict screenshot gate is not yet green for HOME, App Grid, Recents, Widget
-Host and Map ToS. Those surfaces still use simplified XML compositions compared
-with the stock DEWD/card/grid styling. This is tracked as visual work, not hidden
-by lowering the SSIM threshold.
+The remaining rows require clean API 37/user 10 AVD runs, full public API dumps,
+three-run parity evidence and screenshot thresholds from
+[AVD_PARITY_GUIDE_EN.md](AVD_PARITY_GUIDE_EN.md). No row may be changed to
+`ported` solely because a unit test or manifest token passes.

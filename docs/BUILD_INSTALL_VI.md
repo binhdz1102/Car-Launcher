@@ -2,81 +2,76 @@
 
 ## Điều kiện cần
 
-- Windows PowerShell, JDK 17 và Gradle wrapper của repository.
-- Android SDK API 37/build-tools và `adb` trong `PATH`.
-- Cây output AOSP đúng branch và platform library cục bộ. Không commit
-  `Launcher/` hoặc platform artifact sinh ra.
-- AVD API 37 đã boot, fingerprint và user 10 khớp `baseline.lock.json`.
+- Windows PowerShell, JDK 17, Android SDK/build-tools API 37 và `adb`.
+- Platform jar đúng output AOSP. `Launcher/` chỉ là source tham khảo và không
+  được commit.
+- AVD API 37 đã boot, user 10 và fingerprint khớp `baseline.lock.json`.
 
-## Đồng bộ và kiểm artifact platform
+## Đồng bộ và kiểm tra artifact
 
-Build dùng `android.car.jar`, `framework.jar`, SystemUI shared, WindowManager
-Shell và car-qc jar từ đúng output AOSP. Đồng bộ vào thư mục Git ignore
-`platform-artifacts/api-37`:
+Artifact platform được copy vào cây `platform-artifacts/api-37` bị Git ignore:
 
 ```powershell
 .\scripts\sync-platform-artifacts.ps1 `
-  -AospOut D:\path\to\out-avd-car-mysystemapp `
-  -PlatformLibrariesDirectory D:\path\to\My-System-App\libs\platform
+  -AospOut D:\path\to\aosp\out `
+  -PlatformLibrariesDirectory D:\path\to\platform-libs
 .\scripts\verify-platform-artifacts.ps1 -VerifyDevice -Serial emulator-5554
 .\scripts\verify-baseline.ps1 -VerifyDevice -Serial emulator-5554
 ```
 
-Lệnh sync ghi bundle ignore và `platform-artifacts.lock.json`. Mỗi checksum
-phải được sinh lại từ cùng output AOSP; không thay jar của API khác.
-`baseline.lock.json` khóa SHA-256 APK gốc, certificate, package, version và
-fingerprint AVD.
+Các lệnh trên kiểm checksum, SHA-256 baseline, package/version và certificate
+platform; không in secret của keystore.
 
-## Build và kiểm APK
+## Build và static gate
 
 ```powershell
-.\gradlew.bat ktlintCheck detekt lintDebug testDebugUnitTest `
-  :app:assembleDebug :app:assembleRelease --console=plain --max-workers=2
+.\gradlew.bat ktlintCheck detekt lintDebug testDebugUnitTest verifyApiCompat `
+  :app:assembleDebug :app:assembleRelease :app:assembleAndroidTest `
+  --no-daemon --console=plain --max-workers=2
 .\scripts\verify-release-apk.ps1 `
   -ApkPath app\build\outputs\apk\release\app-release.apk
 ```
 
-Release phải ký bằng certificate
-`c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8`. Script
-chỉ in SHA-256 artifact, không log secret keystore.
+Certificate release phải là
+`c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8`.
 
-## Cài làm launcher update
-
-Dùng installer có kiểm tra package path và user:
+## Cài candidate
 
 ```powershell
-.\scripts\install-avd.ps1 -Serial emulator-5554 -UserId 10 -Build
-```
-
-Hoặc cài release đã build:
-
-```powershell
-adb -s emulator-5554 install --no-streaming -r `
+adb -s emulator-5554 install --no-streaming -r --user 10 `
   app\build\outputs\apk\release\app-release.apk
 adb -s emulator-5554 shell am start --user 10 -W `
   -a android.intent.action.MAIN -c android.intent.category.HOME `
   -n com.android.car.carlauncher/.CarLauncher
 ```
 
-`pm path` phải trả `/data/app/...`; APK gốc vẫn nằm ở
-`/system/priv-app/CarLauncher`. Release dùng platform certificate, vì vậy
-không cài APK ký bằng key khác lên package stock.
+`pm path` phải trỏ tới `/data/app/...`; package gốc vẫn ở
+`/system/priv-app/CarLauncher`. Không được dùng key khác.
 
-## So sánh baseline trước nghiệm thu
+## Chạy parity baseline
 
-Cài fixture deterministic, tạo snapshot một lần rồi chạy full matrix:
+Cài fixture và tạo snapshot khôi phục một lần:
 
 ```powershell
 .\scripts\run-parity.ps1 -CreateSnapshot -InstallFixtures `
-  -FixtureApk test-apps\fixture\build\outputs\apk\debug\fixture-debug.apk
-.\scripts\run-parity.ps1 `
-  -CandidateApk app\build\outputs\apk\release\app-release.apk
+  -FixtureApk test-apps\fixture-app\build\outputs\apk\debug\fixture-app-debug.apk
 ```
 
-Runner restore `car_launcher_parity_ready` trước mỗi label, capture sáu
-scenario, ghi `run.json` và restore snapshot khi fail. Nếu pass, runner cài lại
-release candidate và smoke HOME cuối. Xem [AVD parity guide](AVD_PARITY_GUIDE_VI.md)
-để biết mask và ngưỡng nghiệm thu.
+Build AndroidTest rồi chạy full matrix. AndroidTest là bắt buộc, trừ smoke
+không nghiệm thu có chỉ rõ `-SkipInstrumentation`:
+
+```powershell
+.\gradlew.bat :app:assembleAndroidTest --no-daemon --console=plain
+.\scripts\run-parity.ps1 `
+  -CandidateApk app\build\outputs\apk\release\app-release.apk `
+  -InstrumentationApk app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
+```
+
+Runner restore snapshot trước từng label/scenario, xóa toàn bộ logcat, kiểm
+fixture/foreground/topology task, chạy instrumentation, lưu UI hierarchy và
+screenshot, rồi restore snapshot khi `INVALID` hoặc comparison fail. Khi pass,
+runner cài lại release và smoke HOME cuối. Xem
+[AVD_PARITY_GUIDE_VI.md](AVD_PARITY_GUIDE_VI.md).
 
 ## Khôi phục APK gốc
 
@@ -84,5 +79,5 @@ release candidate và smoke HOME cuối. Xem [AVD parity guide](AVD_PARITY_GUIDE
 .\scripts\install-avd.ps1 -Serial emulator-5554 -UserId 10 -RestoreBaseline
 ```
 
-Lệnh kiểm baseline đã khóa trước rồi cài với `-r -d`. Quy trình đầy đủ xem
-[ROLLBACK_VI.md](ROLLBACK_VI.md).
+Lệnh kiểm baseline đã khóa trước khi cài với `-r -d`. Rollback theo tag/commit
+xem [ROLLBACK_VI.md](ROLLBACK_VI.md).

@@ -1,51 +1,39 @@
 # Baseline APK and parity workflow
 
-The local reference APK is `Launcher/apk/CarLauncher.apk`. It is intentionally ignored by Git.
-`baseline.lock.json` fixes its identity, platform certificate, target image, and Android user.
+The local reference is `Launcher/apk/CarLauncher.apk` and is ignored by Git.
+`baseline.lock.json` fixes its SHA-256, certificate, package/version, target
+image and user.
 
-Run the static identity check before capturing evidence:
-
-```powershell
-.\scripts\verify-baseline.ps1 -VerifyDevice
-```
-
-Capture the same state for the reference and an APK under test. `-Install` mutates the connected
-AVD; the reference install includes `-d` because it has versionCode 37.
+Verify the inputs first:
 
 ```powershell
-.\scripts\capture-parity.ps1 -Label baseline -ApkPath Launcher\apk\CarLauncher.apk -Install -Scenario home -LaunchScenario
-.\scripts\capture-parity.ps1 -Label candidate -ApkPath app\build\outputs\apk\release\app-release.apk -Install -Scenario home -LaunchScenario
+.\scripts\verify-baseline.ps1 -VerifyDevice -Serial emulator-5554
+.\scripts\verify-platform-artifacts.ps1 -VerifyDevice -Serial emulator-5554
 ```
 
-The script stores APK metadata, component resolution, package/activity/window/display dumps, UI XML,
-screenshot, and logcat under ignored `artifacts/parity/`. Run both captures from the same restored
-AVD snapshot, with the same fixture state and user 10.
-
-Compare the two screenshots after masking clock, date, artwork, and thumbnails that are expected to
-change:
+The full runner requires the deterministic fixture and AndroidTest APK:
 
 ```powershell
-python scripts\compare-parity.py <baseline-screen.png> <candidate-screen.png> --ignore-rect 0,0,400,120
-python scripts\compare-parity-contract.py <baseline-artifact-dir> <candidate-artifact-dir>
+.\scripts\run-parity.ps1 -CreateSnapshot -InstallFixtures `
+  -FixtureApk test-apps\fixture-app\build\outputs\apk\debug\fixture-app-debug.apk
+.\scripts\run-parity.ps1 `
+  -CandidateApk app\build\outputs\apk\release\app-release.apk `
+  -InstrumentationApk app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
 ```
 
-The default gate requires global RGB SSIM of at least 0.98 and no more than 2% of compared pixels
-to exceed a per-channel difference of 16.
+The runner restores `car_launcher_parity_ready` before every label/scenario,
+installs baseline with downgrade allowed, installs candidate release, clears all
+logcat buffers, checks fixture/foreground/task topology, runs instrumentation,
+captures UI XML/screenshots and restores the snapshot on failure. A capture
+without a valid precondition is `INVALID`, never a pass.
 
-The contract comparison rejects any manifest component/permission/intent-filter change and any
-change to HOME, App Grid, or QuickStep resolution for user 10. Resource IDs are intentionally
-normalized because they are assigned by the candidate build.
+The screenshot gate is RGB tolerance 16, SSIM >= 0.98 and <= 2% different
+pixels. Only documented clock/date/artwork/thumbnail masks are allowed. The
+contract gate compares manifest components, permissions, intent filters,
+metadata, queries, routes and resource names; only build version fields,
+numeric resource IDs and line numbers are normalized.
 
-`run-parity.ps1` refuses to install either APK until the named AVD snapshot exists. Create and
-validate it after the test fixtures have been installed, then run the baseline/candidate matrix:
-
-```powershell
-.\scripts\run-parity.ps1 -CreateSnapshot
-.\scripts\run-parity.ps1 -CandidateApk app\build\outputs\apk\release\app-release.apk
-```
-
-The runner restores the snapshot before each label, executes HOME, App Grid, Recents, Calm Mode,
-Widget Host, and Map ToS with the same user-10 inputs, compares every pair, restores on failure,
-and only leaves a candidate installed after its final HOME smoke passes.
-
-Use `-Scenarios home` for a fast harness smoke; release acceptance always uses the default matrix.
+For a non-acceptance harness smoke, use `-Scenarios home -SkipInstrumentation`.
+The latest audit attempt is recorded at
+`artifacts/parity/audit-run-home/run-20260814-105014/run.json` and is invalid
+because baseline HOME generated an AVD ANR.

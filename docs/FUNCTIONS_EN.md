@@ -1,144 +1,50 @@
-# Car-Launcher functions
+# Car Launcher functions
 
-This document describes the replacement implementation of
-com.android.car.carlauncher on the audited Automotive AVD. Public launcher
-components remain compatible with the stock package while the internals use a
-modern multi-module architecture.
+This document describes the current contract and migration boundaries for
+`com.android.car.carlauncher`. It is an audited work-in-progress, not a claim
+of complete stock parity.
 
-## HOME and Car service lifecycle
+## HOME and media cards
 
-CarLauncher handles MAIN, HOME, SECONDARY_HOME, DEFAULT and LAUNCHER_APP. It
-retains the system launcher's singleTask, stateNotNeeded, resumeWhilePausing and
-ALLOW_HOME_ACTIVITY_ALWAYS_PRESENT contracts.
-
-HOME contains a media card on the left and an embedded-application pane on the
-right. Every surface applies system-bar insets. The shared CarServiceConnection
-does not block the main thread, publishes state with StateFlow and reconnects
-when the Car service dies or becomes ready again.
-
-## Media
-
-MediaRepository combines CarMediaManager, MediaSessionManager and
-MediaController callbacks. The UI supports:
-
-- reconnection to the current source and session;
-- title, artist, artwork, position and duration;
-- previous, play/pause, next and seek;
-- media-source discovery and switching;
-- Media Center launch for the selected source;
-- a bounded empty state when metadata or a session is unavailable.
-
-Calm Mode uses the same repository, so its playback state and controls remain
-consistent with HOME.
+`CarLauncher` preserves HOME/SECONDARY_HOME entry points and uses XML for the
+media card and embedded application pane. Media repositories combine
+CarMediaManager, MediaSession and MediaController state for title, artwork,
+position/duration, playback, seek, source switching and Media Center launch.
+Call, projection and assistive card contracts are present; the complete AVD
+priority/action matrix remains open.
 
 ## Navigation and TaskView
 
-The default map application is resolved through MAIN/CATEGORY_APP_MAPS for the
-current user. ControlledRemoteCarTaskView embeds it in the right pane, updates
-bounds from the XML container, preserves the selected target across HOME
-lifecycle changes and recovers after a vanished task.
+The current-user map intent is resolved before it is sent to a controlled
+TaskView. The host reports task appear/info/vanish, bounds, release and
+reconnect through Flow. `MapTosActivity` provides the ToS fallback and AppGrid
+route. PIP, headless-user, package update and passenger-display cases require
+the full parity matrix before acceptance.
 
-A state machine owns Idle, Loading, Running and Error. Requests have a finite
-timeout; when CarSystemUIProxy or the Car service is unavailable, the UI exposes
-a retryable error instead of hanging or crashing. On a clean boot of the target
-image, Maps Placeholder creates a real SurfaceView/task and delivers
-onTaskAppeared.
+## AppGrid and driving safety
 
-MapTosActivity keeps the fallback component required by scalable SystemUI and
-offers an App Grid action until a map is configured.
+LauncherApps discovery, media-service tiles, paging, recent/search/reorder,
+reset-to-A-Z, pin/unpin/force-stop/app-info shortcuts and dual persistence are
+implemented in the AppGrid feature. `QUERY_ALL_PACKAGES` is retained to match
+AOSP and has a local lint suppression with rationale. Car UX restrictions hide
+search/reorder while driving and disable non-DO applications.
 
-## App Grid, driving safety and reset
+## Recents, QuickStep, Calm Mode and widgets
 
-App Grid is available through
-com.android.car.carlauncher.ACTION_APP_GRID and the stock explicit component
-com.android.car.carlauncher/.AppGridActivity. Its activity uses singleInstance
-like the stock APK.
+Recents uses a horizontal task surface with snapshot/open/remove/clear intents
+and the QuickStep binder. Calm Mode has QC/resource gates, locale temperature,
+media text and control-bar routing. WidgetHost preserves provider IDs through
+stop/start/rebind, and Date widget reacts to time, timezone and locale changes.
 
-LauncherApps supplies current-user activities, while declared
-MediaBrowserService queries supply media tiles. `QUERY_ALL_PACKAGES` is kept
-because the AOSP CarLauncher contract inventories all launchable car packages;
-the permission is locally suppressed in lint with an explanatory comment. The
-RecyclerView provides:
+## Dock and compatibility
 
-- a Navigation tile;
-- icons, labels and activity/media launch;
-- live search;
-- parked-only drag ordering;
-- Preferences DataStore persistence;
-- package add/remove/change observation;
-- DiffUtil updates.
+Dock libraries provide item models, ordering policy, event/package receivers,
+media/task helpers, an XML host/controller and a sample host. The launcher APK
+does not package Dock feature code when the AOSP host owns Dock. The compatibility
+lock explicitly labels remaining AOSP public API work as `partial-port`.
 
-CarUxRestrictions are checked both while rendering and immediately before
-launch. In the injected driving state, search is hidden, drag ordering is
-disabled and non-distraction-optimized applications are disabled; media and DO
-applications remain available. A missing safety service causes a fail-safe
-disabled state.
+## Acceptance
 
-ResetLauncherActivity is published under Apps in Automotive Settings. After
-confirmation it clears DataStore ordering and the grid immediately returns to
-A-Z.
-
-## Recents and QuickStep
-
-CarQuickStepService implements the image's SystemUI ILauncherProxy shared
-contract. Overview or KEYCODE_APP_SWITCH opens CarRecentsActivity; requesting
-overview again returns to the top running task.
-
-RecentTasksRepository uses WindowManager Shell IRecentTasks with an
-ActivityManager fallback. It:
-
-- selects tasks for the current display;
-- excludes the launcher, SystemUI and permission controller;
-- loads labels, icons and task snapshots;
-- opens tasks with startActivityFromRecents;
-- removes one task or clears all tasks;
-- publishes state with StateFlow.
-
-READ_FRAME_BUFFER is requested and granted, so thumbnails are real task
-snapshots rather than placeholders.
-
-## Image compatibility components
-
-In addition to HOME, App Grid and Recents, the APK publishes all launcher-owned
-components present in the stock manifest:
-
-- ControlBarActivity and WidgetHostActivity host AppWidgets, show the configured
-  Date widget and retain widget IDs;
-- DateAppWidgetProvider updates on date, time and timezone changes;
-- CalmModeQCProvider at
-  content://com.android.car.carlauncher.calmmode/calm_mode allows SystemUI to
-  bind the Quick Control;
-- CalmModeActivity presents clock and media controls on a low-distraction screen;
-- MapTosActivity is an embeddable map fallback;
-- InCallServiceImpl retains the Telecom binding while call UI remains owned by
-  CarSystemUI, as in the stock package;
-- ResetLauncherActivity provides the Automotive Settings App Grid reset entry.
-
-Critical privileged permissions, including MANAGE_ACTIVITY_TASKS,
-START_TASKS_FROM_RECENTS, READ_FRAME_BUFFER and BIND_APPWIDGET, are verified as
-granted after the update installation.
-
-## Architecture
-
-- domain owns platform-independent models, repository contracts and state;
-- data isolates Car APIs, LauncherApps, media, WindowManager Shell and DataStore;
-- presentation uses ViewModels, immutable state and lifecycle-aware Flow;
-- app assembles platform entry points and compatibility contracts;
-- Hilt supplies dependencies, while Coroutines/Flow replace polling and
-  manually-managed workers;
-- Java/Kotlin 17, minSdk 34, compileSdk 37 and targetSdk 37.
-
-Room is unnecessary for one small ordered list. An AndroidX navigation graph is
-also unnecessary because the platform enters through fixed activities/actions.
-
-## Verified boundary
-
-This migration is still under audit and is not accepted as a replacement:
-the current AVD run has functional gaps and failed strict screenshot parity.
-Acceptance requires the gates in `TEST_REPORT_EN.md` and the complete
-source/API/resource matrix.
-The AVD has one real occupant display; a trusted 1280x720 overlay display
-verified layout/routing but cannot replace a passenger occupant-zone test on
-multi-display hardware. The image also lacks a real Telecom call and a
-metadata-rich media provider, so those contracts were verified through
-bind/resolve behavior and the sessions available on the AVD.
+Every row needs unit/equivalent tests plus an AVD action/assertion with no ANR.
+Use [MIGRATION_MATRIX_EN.md](MIGRATION_MATRIX_EN.md) and
+[AVD_PARITY_GUIDE_EN.md](AVD_PARITY_GUIDE_EN.md).

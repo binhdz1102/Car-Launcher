@@ -3,48 +3,47 @@
 ## Đầu vào đã khóa
 
 Baseline chính thức là `Launcher/apk/CarLauncher.apk`, SHA-256
-`17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5`, certificate
-được ghi trong `baseline.lock.json`. Thiết bị hỗ trợ là `emulator-5554`, API 37,
-user 10 và snapshot `car_launcher_parity_ready`.
+`17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5`. Mục tiêu
+là AVD API 37/user 10 trên `emulator-5554`; snapshot khôi phục là
+`car_launcher_parity_ready`.
 
-`Launcher/`, `platform-artifacts/` và `artifacts/` đều bị Git ignore. Lệnh parity
-từ chối suite destructive nếu snapshot không tồn tại hoặc không restore được.
+## Quy trình bắt buộc
 
-## Quy trình deterministic
+1. Kiểm baseline, platform artifact, trạng thái boot và fixture APK.
+2. Save rồi load snapshot. Nếu không save/load được thì dừng, không chạy suite
+   có thay đổi trạng thái.
+3. Restore snapshot trước từng scenario và cài baseline bằng
+   `adb install --no-streaming -r -d --user 10`.
+4. Restore lại, cài candidate release ký platform và chạy đúng scenario cùng
+   instrumentation.
+5. So sánh screenshot, UI hierarchy, topology task/display và toàn bộ contract
+   manifest, permission, component, query, routing, overlayable.
+6. Restore khi có lỗi. Khi pass, cài lại release và smoke HOME cuối.
 
-1. Cài fixture APK, tạo và kiểm tra snapshot. Nếu save/load không thành công thì dừng.
-2. Restore snapshot trước **từng** scenario, cài baseline bằng `adb install -r -d`.
-3. Restore cùng snapshot trước **từng** scenario, cài candidate release platform-signed.
-4. Chạy HOME, App Grid, Recents, Calm Mode, Widget Host và Map ToS.
-5. So sánh screenshot, manifest/resource/API contract và topology task/display.
-6. Khi fail hoặc invalid, runner restore snapshot; khi pass mới cài lại candidate và smoke HOME.
+Lệnh chuẩn:
 
-Mỗi `capture.json` ghi `preconditions`, `actions`, `assertions`, `taskTopology`,
-`instrumentation`, `logWindow` và status. `PASS` chỉ hợp lệ khi component mong
-đợi là top-resumed và log window riêng không có FATAL/ANR/SecurityException.
-`INVALID` nghĩa là precondition sai hoặc baseline crash; runner không so sánh và
-không được tính là parity pass.
+```powershell
+.\scripts\run-parity.ps1 `
+  -CandidateApk app\build\outputs\apk\release\app-release.apk `
+  -InstrumentationApk app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
+```
 
-## Quy tắc so sánh
+Runner bao phủ HOME, App Grid, Recents, Calm Mode, WidgetHost và Map ToS. Mỗi
+`capture.json` ghi `preconditions`, `actions`, `assertions`, `taskTopology`,
+`instrumentation` và `logWindow`. `PASS` yêu cầu foreground đúng, fixture sẵn
+sàng, không có map task trùng, không fatal/ANR/`SecurityException` và
+instrumentation pass. Thiếu fixture, foreground sai hoặc topology sai là
+`INVALID`, không được đem so sánh.
 
-Contract phải so toàn bộ merged manifest, component attributes, intent filters,
-metadata, properties, queries, authorities, permissions và overlayable/public
-resources. Resource ID và line number do build gán được chuẩn hóa; khác biệt
-hành vi không được che bằng normalization.
+## Gate ảnh và contract
 
-Screenshot gate dùng RGB tolerance 16, SSIM tối thiểu 0,98 và tối đa 2% pixel
-khác biệt. Chỉ được mask clock/date/artwork/thumbnail động đã ghi rõ; không mask
-layout, TaskView hoặc component.
+Comparator dùng RGB tolerance 16, SSIM >= 0.98 và pixel khác biệt <= 2%. Chỉ
+được mask clock/date, artwork và thumbnail động; không mask layout, TaskView
+hay component. Contract chỉ normalize line number, numeric resource ID và
+version build.
 
-## Phạm vi hành vi bắt buộc
-
-- HOME clean boot, TaskView map appear/update/remove/reconnect;
-- App Grid paging, recent/search/reorder, TOS, mirroring và UXR Park/Drive;
-- media source, queue/history, call/projection/assistive card;
-- Recents/QuickStep snapshot, open, remove, swipe và clear;
-- Calm Mode QC, clock/date/temperature/media và control bar translucent;
-- WidgetHost/Date widget, Dock, secondary display và release install/restore;
-- migration order từ baseline sang candidate và rollback ngược lại.
-
-Full run cũ `artifacts/parity/run-20260813-204544` là bằng chứng fail trước khắc
-phục, không được gọi là nghiệm thu pass.
+Resource lock yêu cầu 354 overlayable app và 120 overlayable AppGrid. Phải chạy
+API-compat/resource verification trước AVD suite. Không gọi run `INVALID` là
+pass. Evidence hiện tại ở
+`artifacts/parity/audit-run-home/run-20260814-105014/run.json`; run này invalid
+vì baseline HOME phát sinh ANR trên AVD.
