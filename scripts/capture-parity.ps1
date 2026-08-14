@@ -133,14 +133,15 @@ function Get-ScenarioComponent([string]$Name) {
 }
 
 function Ensure-ScenarioForeground([string]$ScenarioCommand, [string]$Component) {
-    if ([string]::IsNullOrWhiteSpace($Component)) { return }
+    if ([string]::IsNullOrWhiteSpace($Component)) { return $true }
     for ($attempt = 0; $attempt -lt 3; $attempt++) {
         $activityState = (& adb -s $Serial shell dumpsys activity activities) -join "`n"
-        if ($activityState -match "topResumedActivity=.*$([regex]::Escape($Component))") { return }
+        if ($activityState -match "topResumedActivity=.*$([regex]::Escape($Component))") { return $true }
         Stop-BackgroundScenarioTasks
         & adb -s $Serial shell $ScenarioCommand | Out-Null
         Start-Sleep -Seconds 1
     }
+    return $false
 }
 
 if (-not (Test-Path -LiteralPath $ApkPath)) {
@@ -156,6 +157,9 @@ if ($Label -eq "baseline") {
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outputDir = Join-Path $ArtifactsRoot "$timestamp-$Label-$Scenario"
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+$scenarioComponent = Get-ScenarioComponent $Scenario
+$scenarioCommand = $null
+$foregroundMatched = $true
 
 if ($Install) {
     # The API 37 AVD's streamed PackageInstaller transport is unreliable. Using adb's
@@ -166,6 +170,9 @@ if ($Install) {
     & adb @installArguments
     if ($LASTEXITCODE -ne 0) { throw "APK installation failed for $Label." }
 }
+
+# Isolate the evidence window from installation output and stale processes.
+& adb -s $Serial logcat -c | Out-Null
 
 $aapt2 = Get-Aapt2
 & $aapt2 dump badging $ApkPath | Set-Content -LiteralPath (Join-Path $outputDir "apk-badging.txt")
@@ -201,7 +208,7 @@ if ($LaunchScenario) {
         Set-Content -LiteralPath (Join-Path $outputDir "launch-$Scenario.txt")
     Start-Sleep -Seconds 2
     Dismiss-InitialUserNotice
-    Ensure-ScenarioForeground $scenarioCommand (Get-ScenarioComponent $Scenario)
+    $foregroundMatched = Ensure-ScenarioForeground $scenarioCommand $scenarioComponent
 }
 
 $commands = [ordered]@{
@@ -223,6 +230,24 @@ Invoke-AdbBinary @("-s", $Serial, "exec-out", "screencap", "-p") (Join-Path $out
 & adb -s $Serial logcat -d -v threadtime | Select-Object -Last 3000 |
     Set-Content -LiteralPath (Join-Path $outputDir "logcat.txt")
 
+$logLines = @(Get-Content -LiteralPath (Join-Path $outputDir "logcat.txt") -ErrorAction SilentlyContinue)
+$fatalCount = @($logLines | Select-String -Pattern "FATAL EXCEPTION|Fatal signal|Process .* has died").Count
+$anrCount = @($logLines | Select-String -Pattern "ANR in |Input dispatching timed out").Count
+$securityExceptionCount = @($logLines | Select-String -Pattern "SecurityException").Count
+$status = if (-not $foregroundMatched -or $fatalCount -gt 0 -or $anrCount -gt 0 -or $securityExceptionCount -gt 0) {
+    "INVALID"
+} else {
+    "PASS"
+}
+$statusReason = if (-not $foregroundMatched) {
+    "Expected scenario component was not top-resumed after retries."
+} elseif ($fatalCount -gt 0 -or $anrCount -gt 0 -or $securityExceptionCount -gt 0) {
+    "Scenario log window contains a fatal, ANR, or security failure."
+} else {
+    ""
+}
+$actionList = if ($null -eq $scenarioCommand) { @() } else { @($scenarioCommand) }
+
 [PSCustomObject]@{
     label = $Label
     apk = (Resolve-Path -LiteralPath $ApkPath).Path
@@ -231,8 +256,32 @@ Invoke-AdbBinary @("-s", $Serial, "exec-out", "screencap", "-p") (Join-Path $out
     launchedScenario = [bool]$LaunchScenario
     serial = $Serial
     userId = $UserId
+    status = $status
+    statusReason = $statusReason
+    scenarioComponent = $scenarioComponent
+    preconditions = [ordered]@{
+        deviceReady = $true
+        userId = $UserId
+        snapshotRequired = $true
+        installRequested = [bool]$Install
+    }
+    actions = $actionList
+    assertions = [ordered]@{
+        foregroundComponent = $scenarioComponent
+        foregroundMatched = $foregroundMatched
+        fatalCount = $fatalCount
+        anrCount = $anrCount
+        securityExceptionCount = $securityExceptionCount
+    }
+    taskTopology = @("activity.txt", "window.txt", "display.txt", "package.txt")
+    instrumentation = @()
+    logWindow = [ordered]@{
+        file = "logcat.txt"
+        lines = $logLines.Count
+        clearedBeforeLaunch = [bool]$LaunchScenario
+    }
     outputDir = (Resolve-Path -LiteralPath $outputDir).Path
     capturedAt = (Get-Date).ToUniversalTime().ToString("o")
-} | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $outputDir "capture.json")
+} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $outputDir "capture.json")
 
 Write-Output (Resolve-Path -LiteralPath $outputDir).Path

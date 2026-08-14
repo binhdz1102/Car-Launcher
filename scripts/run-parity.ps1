@@ -131,6 +131,23 @@ function Capture-Scenario([string]$Label, [string]$ApkPath, [string]$Scenario, [
     return [string]$output[$output.Length - 1]
 }
 
+function Assert-CaptureValid([string]$ArtifactDirectory, [string]$Label, [string]$Scenario) {
+    $capturePath = Join-Path $ArtifactDirectory "capture.json"
+    if (-not (Test-Path -LiteralPath $capturePath)) {
+        throw "INVALID: missing capture metadata for $Label/$Scenario."
+    }
+    $metadata = Get-Content -LiteralPath $capturePath -Raw | ConvertFrom-Json
+    if ($metadata.status -ne "PASS") {
+        $reason = if ([string]::IsNullOrWhiteSpace($metadata.statusReason)) {
+            "capture status is $($metadata.status)"
+        } else {
+            $metadata.statusReason
+        }
+        throw "INVALID: $Label/${Scenario}: $reason"
+    }
+    return $metadata
+}
+
 & (Join-Path $scriptRoot "verify-baseline.ps1") -ApkPath $BaselineApk -VerifyDevice -Serial $Serial | Out-Null
 Wait-ForDevice
 if ($CreateSnapshot) {
@@ -182,6 +199,7 @@ $candidateArtifacts = [ordered]@{}
 $comparisonResults = @()
 $completed = $false
 $failureMessage = $null
+$runStatus = "failed"
 
 function Write-RunArtifact {
     param(
@@ -205,18 +223,16 @@ function Write-RunArtifact {
 }
 
 try {
-    Restore-Snapshot
-    $install = $true
     foreach ($scenario in $scenarios) {
-        $baselineArtifacts[$scenario] = Capture-Scenario "baseline" $BaselineApk $scenario $install
-        $install = $false
+        Restore-Snapshot
+        $baselineArtifacts[$scenario] = Capture-Scenario "baseline" $BaselineApk $scenario $true
+        Assert-CaptureValid $baselineArtifacts[$scenario] "baseline" $scenario | Out-Null
     }
 
-    Restore-Snapshot
-    $install = $true
     foreach ($scenario in $scenarios) {
-        $candidateArtifacts[$scenario] = Capture-Scenario "candidate" $CandidateApk $scenario $install
-        $install = $false
+        Restore-Snapshot
+        $candidateArtifacts[$scenario] = Capture-Scenario "candidate" $CandidateApk $scenario $true
+        Assert-CaptureValid $candidateArtifacts[$scenario] "candidate" $scenario | Out-Null
     }
 
     foreach ($scenario in $scenarios) {
@@ -247,18 +263,21 @@ try {
 
     # A passing result is only accepted after reinstalling the release candidate and rerunning HOME.
     $finalSmoke = Capture-Scenario "candidate" $CandidateApk "home" $true
+    Assert-CaptureValid $finalSmoke "candidate" "home-final-smoke" | Out-Null
     $completed = $true
+    $runStatus = "passed"
     Write-RunArtifact -Status "passed"
     Write-Output (Resolve-Path -LiteralPath $runDir).Path
 } catch {
     $failureMessage = $_.Exception.Message
+    if ($failureMessage -like "INVALID:*") { $runStatus = "invalid" }
     throw
 } finally {
     if (-not $completed) {
         try {
             Restore-Snapshot
         } finally {
-            Write-RunArtifact -Status "failed" -ErrorMessage $failureMessage
+            Write-RunArtifact -Status $runStatus -ErrorMessage $failureMessage
         }
     }
 }

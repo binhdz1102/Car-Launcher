@@ -20,8 +20,10 @@ command below refuses to run a destructive suite when the snapshot is absent:
 
 1. Install fixture APKs and create/save the snapshot. If save/load cannot be
    validated, stop; do not run the destructive suite.
-2. Restore the snapshot and capture the baseline with `adb install -r -d`.
-3. Restore the same snapshot and install the platform-signed candidate release.
+2. Restore the snapshot before **every** scenario and capture the baseline with
+   `adb install -r -d`.
+3. Restore the same snapshot before every scenario and install the platform-signed
+   candidate release.
 4. Run exactly the same six scenarios: HOME, App Grid, Recents, Calm Mode,
    Widget Host and Map ToS.
 5. Compare screenshots and launcher-owned manifest/routing artifacts.
@@ -30,14 +32,29 @@ command below refuses to run a destructive suite when the snapshot is absent:
 
 `run-parity.ps1` automates this sequence and writes a run directory containing
 `run.json`, one folder per scenario, APK badging, manifest XML tree, dumpsys
-activity/window/display, UI hierarchy, screenshot and the last 3000 logcat lines.
+activity/window/display, UI hierarchy, screenshot and a cleared 3000-line
+logcat window. Each capture also records `preconditions`, `actions`,
+`assertions`, `taskTopology`, `instrumentation` and `logWindow` in
+`capture.json`.
+
+Capture status is fail-closed:
+
+- `PASS` means the expected component was top-resumed and the isolated log
+  window has no fatal exception, ANR or security exception.
+- `INVALID` means a scenario precondition failed (wrong foreground component,
+  baseline crash, missing artifact or unsafe topology). It is never compared or
+  counted as a parity pass; the runner restores the snapshot and writes the
+  invalid reason to `run.json`.
 
 ## Comparison rules
 
-The contract runner compares launcher-owned components, permissions, actions and
-user-10 resolution for HOME, App Grid and QuickStep. Build-assigned resource IDs
-and line numbers are normalized. Support-library entries not owned by the
-launcher are deliberately excluded and documented in the migration matrix.
+The contract runner compares the complete merged manifest/resource/API contract;
+launcher-owned components, permissions, actions and user-10 resolution for HOME,
+App Grid and QuickStep are mandatory. Build-assigned resource IDs and line
+numbers are normalized, but component attributes, metadata, properties,
+queries, authorities, permissions and overlayable/public names are not ignored.
+Support-library entries are allowed only when the baseline/candidate ownership
+manifest explicitly records the same owner and version.
 
 The screenshot gate uses RGB pixel tolerance 16, global SSIM >= 0.98 and at most
 2% different pixels. Masks may remove dynamic clock/date, artwork, thumbnails or
