@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Resource indirection matches the process contract emitted by the AOSP CarUi merge. -->
+    <string name="platform_car_ui_process" translatable="false">:car_ui</string>
+</resources>

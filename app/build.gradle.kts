@@ -34,6 +34,10 @@ android {
         // can test this development replacement without -d.
         versionCode = 1000
         versionName = "custom-dev"
+        // The AVD is the Baklava API 37 preview. Use the codename form so PackageManager sees
+        // the same preview target/minimum contract as the stock launcher (runtime value 10000).
+        minSdkPreview = "Baklava"
+        targetSdkPreview = "Baklava"
         buildConfigField("String", "GIT_COMMIT_HASH", "\"$gitCommitHash\"")
     }
 
@@ -67,10 +71,24 @@ android {
     buildFeatures {
         buildConfig = true
     }
+
+    // Match the platform APK's legacy native-library extraction behavior without declaring the
+    // deprecated manifest attribute directly (AGP 9 rejects that source-level form).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    lint {
+        // minSdkPreview is emitted to the manifest, but current lint does not infer its numeric
+        // value. These targeted suppressions keep analysis aligned with the API 37/Baklava-only
+        // deployment contract without a generated lint baseline.
+        disable += setOf("NewApi", "InlinedApi", "VectorDrawableCompat", "WebpUnsupported")
+    }
 }
 
 dependencies {
-    implementation(project(":core:common"))
     implementation(project(":core:model"))
     implementation(project(":core:platform"))
     implementation(project(":core:ui"))
