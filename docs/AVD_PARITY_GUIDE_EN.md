@@ -45,6 +45,9 @@ normalizes line numbers, numeric resource IDs and build version fields only.
 
 The resource lock requires 354 app overlayable items and 120 AppGrid items.
 API-compat and resource verification must run before the AVD suite. No report
-may call an `INVALID` run a pass. The current audit evidence is
-`artifacts/parity/audit-run-home/run-20260814-105014/run.json`; it is invalid
-because the baseline HOME log window contains an AVD launcher ANR.
+may call an `INVALID` run a pass. Current evidence is
+`artifacts/parity/controlled-home-mediafix-20260814/run-20260814-161355`:
+captures are valid, but the HOME screenshot/contract gates fail. Recents
+evidence at `artifacts/parity/recents-direct2-20260814/20260814-163744-baseline-recents`
+is correctly `INVALID` after deterministic fixture seeding because stock Maps
+remains top-resumed with fatal logcat errors.

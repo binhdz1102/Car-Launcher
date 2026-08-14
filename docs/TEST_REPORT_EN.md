@@ -1,16 +1,16 @@
 # Car Launcher audit test report
 
-Evidence date: 2026-08-14. Baseline is the locked
-`Launcher/apk/CarLauncher.apk`; ignored artifact directories contain raw output.
+Evidence date: 2026-08-14. The official baseline is the ignored
+`Launcher/apk/CarLauncher.apk`; raw AVD artifacts are ignored and are referenced
+by path below.
 
 ## Verdict
 
-The migration has a buildable platform-signed release and several tested
-feature slices. It is **not accepted as a stock-parity replacement**. The
-latest AVD attempt stopped during the baseline HOME phase because the launcher
-window generated an actual `Input dispatching timed out` ANR. The fail-closed
-runner restored the snapshot and did not compare a candidate against invalid
-baseline evidence.
+The migration now has a platform-signed release, truthful static gates, a
+fail-closed parity runner, and valid HOME/App Grid captures. It is **not
+accepted as a stock-parity replacement**: the candidate HOME UI is still not
+the AOSP media/home-card layout, the merged resource set is incomplete, and
+Recents baseline setup still returns to Maps with fatal errors on this AVD.
 
 ## Locked identity
 
@@ -18,39 +18,51 @@ baseline evidence.
 | --- | --- |
 | Package | `com.android.car.carlauncher` |
 | Baseline SHA-256 | `17dbd56ce171ca7bcd06486cb7893da8232242661d3a3ff60b91f5a9cac9d3a5` |
-| Candidate release SHA-256 | `24727a8b1472b20ec7395cb677d302d42ad91cb3ddb116aa133a85b6e49f0a82` |
-| Certificate | `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8` |
-| Target | API 37 / user 10 / `emulator-5554` |
+| Candidate release SHA-256 | `2bd26ef1b499e70c8f49a9a6b04b089c190dd36ea6cc75f9c3d07ee0419dc335` |
+| Platform certificate | `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8` |
+| Target | API 37/Baklava, user 10, `emulator-5554` |
 
 ## Completed gates
 
-- Kotlin compilation, release APK and AndroidTest APK: **PASS**
-- AppGrid/Dock order codec round-trip and truncated/corrupt fallback tests:
-  **PASS**
-- Dock policy and sample-host unit tests: **PASS**
-- ktlint for changed modules and release verification: **PASS**
-- Overlayable resource contract: **PASS** (354 + 120 items)
-- Connected AVD parity acceptance: **NOT RUN TO COMPLETION**
+- `ktlintCheck`, `detekt`, targeted `lintDebug`, architecture/source/resource
+  checks, all `testDebugUnitTest` suites, debug/release and AndroidTest APK
+  builds: **PASS**.
+- AppGrid/Dock order codec, corrupt/truncated fallback, media-controller
+  selection and fixture contract tests: **PASS**.
+- Overlayable source contract: **PASS** (354 app + 120 AppGrid items).
+- Release APK certificate verification: **PASS** (SHA-256 above).
+- Full parity acceptance: **FAIL / OPEN**; no release claim is made.
 
 ## AVD evidence
 
-The latest run is
-`artifacts/parity/audit-run-home/run-20260814-105014/run.json`. Baseline HOME
-was marked `INVALID` with reason `Scenario log window contains a fatal, ANR, or
-security failure`; logcat records the launcher ANR. The runner also verified
-fixture readiness, task topology and the six-test launcher instrumentation
-package before stopping. This confirms the guard works; it does not prove
-visual or behavioral parity.
+1. `artifacts/parity/controlled-home-mediafix-20260814/run-20260814-161355`
+   - baseline and candidate capture metadata: `PASS`;
+   - fixture media is selected by the candidate (`Fixture Drive`), and both
+     task topology/log windows are valid;
+   - screenshot: SSIM `0.8538034994`, different pixels `8.7308578%` — **FAIL**;
+   - contract: **FAIL** (candidate `application` name/`testOnly` attributes and
+     3,884 baseline-only / 199 candidate-only resource tokens).
+2. `artifacts/parity/remediation-matrix-20260814b/run-20260814-162034`
+   - baseline HOME and App Grid captures passed;
+   - baseline Recents was correctly returned as `INVALID`: Maps became
+     top-resumed and logcat contained two fatal exceptions. The runner stopped
+     before comparing a candidate, as required.
+3. `artifacts/parity/recents-direct2-20260814/20260814-163744-baseline-recents`
+   - deterministic utility/media/map fixture tasks were seeded and recorded;
+   - stock Recents still ended on Maps with fatal errors, therefore this is
+     invalid baseline evidence, not a candidate pass.
 
-The historical run `artifacts/parity/run-20260813-204544` remains useful only
-as pre-remediation failure evidence. Its screenshot/contract claims must not be
-used as a release gate.
+The historical `artifacts/parity/run-20260813-204544` remains pre-remediation
+failure evidence only.
 
-## Release gate still required
+## Open acceptance conditions
 
-Run the full six-scenario matrix three times from a clean snapshot after the
-baseline ANR/setup issue is resolved. Every capture must be `PASS`, contract
-diffs must be zero outside explicitly allowed version/build fields, all listed
-TaskView/UXR/media/Recents/WidgetHost/Dock/data rollback cases must execute,
-and screenshots must meet SSIM >= 0.98 with <= 2% different pixels. Leave the
-candidate installed only after that final smoke passes.
+- Port the remaining AOSP media/home-card, App Grid, Recents/QuickStep,
+  Calm/WidgetHost, Dock and public-library implementations and map every public
+  symbol to an equivalent test or an approved N/A reason.
+- Match the merged manifest/resource contract (including transitive Car UI and
+  SystemUI resources) and remove unexpected application attributes.
+- Make the baseline Recents fixture/setup stable, then run the complete matrix
+  three consecutive times from `car_launcher_parity_ready`, with instrumentation.
+- Require `PASS` captures, no ANR/fatal/SecurityException, topology equivalence,
+  SSIM >= 0.98 and <= 2% different pixels before leaving the candidate installed.

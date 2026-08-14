@@ -29,6 +29,11 @@ kept on `main`:
 11. `d2a9800` Dock library behavior and sample host
 12. `4085451` rollback-safe order codecs and full parity harness
 13. `1ba8712` final static-gate fixes, platform permission lint contracts and media cleanup
+14. `8d31380` clean module-boundary checks, source lock and atomic persistence
+15. `d3278b9` padded AppGrid pages and AOSP resource/accessibility hierarchy
+16. `736de9c` fail-closed UI/task preconditions, fixture seeding and semantic contract diff
+17. `7cdea62` main-thread TaskView callback lifecycle and media-session handoff scoring
+18. `b14eca0` platform manifest compatibility endpoints and API 37 release configuration
 
 The library/API locks intentionally report `partial-port` where the complete
 AOSP implementation is not yet present. This prevents a passing seam check
@@ -38,19 +43,31 @@ from being mistaken for full behavioral parity.
 
 Static verification completed after the remediation slices:
 
-- Gradle release and AndroidTest APK build: **PASS**
-- AppGrid/Dock/data unit tests and ktlint: **PASS**
+- Full Gradle static/unit/build gate (including `verifyArchitecture` and
+  `:app:assembleAndroidTest`): **PASS**
+- AppGrid/Dock/media/data unit tests and ktlint/detekt: **PASS**
 - Resource contract: **PASS** (354 app + 120 AppGrid overlayable items)
+- Source-tree and boundary checks: **PASS**; AppGrid/Dock API status remains
+  `partial-port` and is therefore not an acceptance pass.
 - Release APK verification: **PASS**; SHA-256
-  `24727a8b1472b20ec7395cb677d302d42ad91cb3ddb116aa133a85b6e49f0a82`
+  `2bd26ef1b499e70c8f49a9a6b04b089c190dd36ea6cc75f9c3d07ee0419dc335`
 - Full AVD parity acceptance: **NOT ACCEPTED**
 
-The latest run under `artifacts/parity/audit-run-home` stopped before candidate
-comparison because the baseline HOME capture reported an actual launcher ANR
-(`Input dispatching timed out`). The runner restored the snapshot and wrote the
-reason to `run.json`. This is an invalid setup/evidence run, not a parity pass.
-The earlier `artifacts/parity/run-20260813-204544` remains historical failure
-evidence only.
+The latest valid HOME run is
+`artifacts/parity/controlled-home-mediafix-20260814/run-20260814-161355`:
+both captures and task/log topology are `PASS`, but screenshot SSIM is
+`0.8538034994` with `8.7308578%` different pixels and the manifest/resource
+contract fails. The candidate now selects the seeded Fixture Drive session;
+the remaining difference is the HOME media/card layout, not a missing fixture.
+
+The Recents run
+`artifacts/parity/recents-direct2-20260814/20260814-163744-baseline-recents`
+records deterministic fixture task creation, then correctly returns `INVALID`
+because stock Recents exposes Maps as top-resumed and logcat contains two fatal
+exceptions. `artifacts/parity/remediation-matrix-20260814b/run-20260814-162034`
+stopped at the same fail-closed baseline precondition. These are invalid setup
+runs, not parity passes. `artifacts/parity/run-20260813-204544` remains
+historical failure evidence only.
 
 ## Acceptance conditions still open
 

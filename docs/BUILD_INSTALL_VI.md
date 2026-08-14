@@ -25,7 +25,7 @@ platform; không in secret của keystore.
 ## Build và static gate
 
 ```powershell
-.\gradlew.bat ktlintCheck detekt lintDebug testDebugUnitTest verifyApiCompat `
+.\gradlew.bat ktlintCheck detekt lintDebug testDebugUnitTest verifyApiCompat verifyArchitecture `
   :app:assembleDebug :app:assembleRelease :app:assembleAndroidTest `
   --no-daemon --console=plain --max-workers=2
 .\scripts\verify-release-apk.ps1 `
@@ -38,7 +38,7 @@ Certificate release phải là
 ## Cài candidate
 
 ```powershell
-adb -s emulator-5554 install --no-streaming -r --user 10 `
+adb -s emulator-5554 install --no-streaming -t -r -d --user 10 `
   app\build\outputs\apk\release\app-release.apk
 adb -s emulator-5554 shell am start --user 10 -W `
   -a android.intent.action.MAIN -c android.intent.category.HOME `

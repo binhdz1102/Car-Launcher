@@ -34,6 +34,9 @@ metadata, queries, routes and resource names; only build version fields,
 numeric resource IDs and line numbers are normalized.
 
 For a non-acceptance harness smoke, use `-Scenarios home -SkipInstrumentation`.
-The latest audit attempt is recorded at
-`artifacts/parity/audit-run-home/run-20260814-105014/run.json` and is invalid
-because baseline HOME generated an AVD ANR.
+The latest HOME evidence is recorded at
+`artifacts/parity/controlled-home-mediafix-20260814/run-20260814-161355`:
+captures are valid, but screenshot and manifest/resource comparison still fail.
+The latest deterministic Recents setup is
+`artifacts/parity/recents-direct2-20260814/20260814-163744-baseline-recents`;
+it is `INVALID` because stock Maps remains top-resumed with fatal logcat errors.

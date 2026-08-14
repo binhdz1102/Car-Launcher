@@ -28,24 +28,40 @@ Chuỗi bắt đầu tại tag `audit-remediation-start-20260814` trên `main`:
 11. `d2a9800` behavior Dock và sample host
 12. `4085451` codec order rollback-safe và parity harness đầy đủ
 13. `1ba8712` static gate cuối, lint permission platform và media cleanup
+14. `8d31380` boundary module sạch, source lock và persistence atomic
+15. `d3278b9` page padding AppGrid và hierarchy resource/accessibility AOSP
+16. `736de9c` precondition UI/task fail-closed, seed fixture và contract diff
+17. `7cdea62` lifecycle callback TaskView trên main và chọn media session
+18. `b14eca0` manifest compatibility endpoint và cấu hình release API 37
 
 API/library lock vẫn ghi `partial-port` khi AOSP chưa được port đủ. Vì vậy
 seam pass không bị hiểu nhầm là parity hành vi hoàn chỉnh.
 
 ## Bằng chứng hiện tại
 
-- Build release và AndroidTest APK: **PASS**
-- Unit test data AppGrid/Dock và ktlint: **PASS**
+- Full Gradle static/unit/build gate (gồm `verifyArchitecture` và
+  `:app:assembleAndroidTest`): **PASS**
+- Unit test AppGrid/Dock/media/data và ktlint/detekt: **PASS**
 - Resource contract: **PASS** (354 overlayable app + 120 AppGrid)
+- Source-tree/boundary check: **PASS**; API AppGrid/Dock vẫn `partial-port`,
+  nên chưa phải acceptance.
 - Verify release APK: **PASS**; SHA-256
-  `24727a8b1472b20ec7395cb677d302d42ad91cb3ddb116aa133a85b6e49f0a82`
+  `2bd26ef1b499e70c8f49a9a6b04b089c190dd36ea6cc75f9c3d07ee0419dc335`
 - Nghiệm thu full AVD parity: **CHƯA ĐẠT**
 
-Run mới nhất tại `artifacts/parity/audit-run-home` dừng trước bước so sánh
-candidate vì baseline HOME phát sinh ANR thật (`Input dispatching timed out`).
-Runner đã restore snapshot và ghi nguyên nhân vào `run.json`. Đây là run
-`INVALID`, không phải parity pass. Run cũ
-`artifacts/parity/run-20260813-204544` chỉ là bằng chứng thất bại lịch sử.
+Run HOME hợp lệ mới nhất là
+`artifacts/parity/controlled-home-mediafix-20260814/run-20260814-161355`:
+capture và topology/log đều `PASS`, candidate chọn được session Fixture Drive,
+nhưng SSIM chỉ `0.8538034994`, pixel khác `8.7308578%` và contract
+manifest/resource vẫn fail. Khác biệt còn lại là layout media/card HOME.
+
+Run Recents
+`artifacts/parity/recents-direct2-20260814/20260814-163744-baseline-recents`
+đã seed task fixture xác định, sau đó trả `INVALID` đúng yêu cầu vì stock
+Recents đưa Maps lên top-resumed và log có hai fatal exception.
+`artifacts/parity/remediation-matrix-20260814b/run-20260814-162034` cũng dừng ở
+precondition baseline tương tự. Đây là run invalid, không phải parity pass.
+`artifacts/parity/run-20260813-204544` chỉ là bằng chứng fail lịch sử.
 
 ## Điều kiện nghiệm thu còn mở
 

@@ -44,6 +44,9 @@ version build.
 
 Resource lock yêu cầu 354 overlayable app và 120 overlayable AppGrid. Phải chạy
 API-compat/resource verification trước AVD suite. Không gọi run `INVALID` là
-pass. Evidence hiện tại ở
-`artifacts/parity/audit-run-home/run-20260814-105014/run.json`; run này invalid
-vì baseline HOME phát sinh ANR trên AVD.
+pass. Evidence HOME hiện tại ở
+`artifacts/parity/controlled-home-mediafix-20260814/run-20260814-161355`:
+capture hợp lệ nhưng gate ảnh/contract còn fail. Evidence Recents ở
+`artifacts/parity/recents-direct2-20260814/20260814-163744-baseline-recents`
+được trả `INVALID` đúng sau khi seed fixture xác định, vì Maps stock vẫn
+top-resumed và log có fatal error.

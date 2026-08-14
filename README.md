@@ -144,9 +144,11 @@ recents snapshots, reset ordering and the secondary-display check, are recorded
 in [the English test report](docs/TEST_REPORT_EN.md) and
 [the Vietnamese test report](docs/TEST_REPORT_VI.md). The retained
 pre-remediation failure is under `artifacts/parity/run-20260813-204544`; the
-latest audit attempt is under `artifacts/parity/audit-run-home` and is
-`INVALID` because the baseline HOME log window contains an AVD ANR. These
-artifact directories are ignored by Git and are not acceptance evidence.
+latest HOME evidence is under
+`artifacts/parity/controlled-home-mediafix-20260814` and remains open because
+the screenshot/contract gates fail. Recents setup is fail-closed under
+`artifacts/parity/recents-direct2-20260814`. These artifact directories are
+ignored by Git and are not acceptance evidence.
 
 The exact AVD only exposes one physical occupant display. A trusted 1280x720
 overlay display verified display routing and responsive layout, but it is not a

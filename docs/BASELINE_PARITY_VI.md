@@ -33,5 +33,9 @@ permission, intent filter, metadata, query, route và resource name; chỉ
 normalize version build, numeric resource ID và line number.
 
 Smoke harness không nghiệm thu dùng `-Scenarios home -SkipInstrumentation`.
-Audit mới nhất ở `artifacts/parity/audit-run-home/run-20260814-105014/run.json`
-invalid vì baseline HOME phát sinh ANR trên AVD.
+Evidence HOME mới nhất ở
+`artifacts/parity/controlled-home-mediafix-20260814/run-20260814-161355`:
+capture hợp lệ nhưng gate ảnh và manifest/resource vẫn fail. Setup Recents
+deterministic ở
+`artifacts/parity/recents-direct2-20260814/20260814-163744-baseline-recents`
+được trả `INVALID` vì Maps stock vẫn top-resumed và log có fatal error.
