@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.android.car.carlauncher.core.model.DisplayTarget
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridMode
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridOrientation
-import com.android.car.carlauncher.feature.appgrid.presentation.databinding.FragmentAppGridBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -28,16 +27,15 @@ import kotlinx.coroutines.launch
 class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     private val viewModel: AppGridViewModel by viewModels()
     private val showToolbar: Boolean by lazy { resources.getBoolean(R.bool.app_grid_show_toolbar) }
-    private var binding: FragmentAppGridBinding? = null
+    private var binding: AppGridViews? = null
     private lateinit var adapter: AppGridAdapter
-    private var initialFocusRequested = false
 
     override fun onViewCreated(
         view: View,
         savedInstanceState: Bundle?,
     ) {
         super.onViewCreated(view, savedInstanceState)
-        val currentBinding = FragmentAppGridBinding.bind(view)
+        val currentBinding = AppGridViews.bind(view)
         binding = currentBinding
         if (!showToolbar) {
             currentBinding.appGridTitle.visibility = View.GONE
@@ -59,6 +57,8 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
                 },
             )
         currentBinding.appGrid.adapter = adapter
+        // Focus is owned by individual app_item cells, matching the stock AppGridRecyclerView.
+        currentBinding.appGrid.isFocusable = false
         currentBinding.appGrid.layoutManager =
             GridLayoutManager(requireContext(), GRID_COLUMNS, RecyclerView.VERTICAL, false)
         currentBinding.appGrid.layoutDirection = View.LAYOUT_DIRECTION_LTR
@@ -104,7 +104,6 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
 
     override fun onDestroyView() {
         binding = null
-        initialFocusRequested = false
         super.onDestroyView()
     }
 
@@ -115,7 +114,6 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     private fun render(state: AppGridUiState) {
         val currentBinding = binding ?: return
         adapter.submitItems(state.visibleItems)
-        requestInitialFocus(currentBinding, state)
         renderContentVisibility(currentBinding, state)
         renderToolbar(currentBinding, state)
         renderTosBanner(currentBinding, state)
@@ -123,17 +121,8 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
         configureGrid(state.state?.orientation ?: AppGridOrientation.HORIZONTAL)
     }
 
-    private fun requestInitialFocus(
-        currentBinding: FragmentAppGridBinding,
-        state: AppGridUiState,
-    ) {
-        if (initialFocusRequested || state.visibleItems.isEmpty()) return
-        initialFocusRequested = true
-        currentBinding.appGrid.post { currentBinding.appGrid.getChildAt(0)?.requestFocus() }
-    }
-
     private fun renderContentVisibility(
-        currentBinding: FragmentAppGridBinding,
+        currentBinding: AppGridViews,
         state: AppGridUiState,
     ) {
         currentBinding.appGridEmpty.visibility =
@@ -141,7 +130,7 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     }
 
     private fun renderToolbar(
-        currentBinding: FragmentAppGridBinding,
+        currentBinding: AppGridViews,
         state: AppGridUiState,
     ) {
         currentBinding.appGridSearch.visibility =
@@ -155,7 +144,7 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     }
 
     private fun renderTosBanner(
-        currentBinding: FragmentAppGridBinding,
+        currentBinding: AppGridViews,
         state: AppGridUiState,
     ) {
         currentBinding.tosBanner.visibility =
@@ -163,7 +152,7 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
     }
 
     private fun renderTitle(
-        currentBinding: FragmentAppGridBinding,
+        currentBinding: AppGridViews,
         mode: AppGridMode,
     ) {
         currentBinding.appGridTitle.setText(

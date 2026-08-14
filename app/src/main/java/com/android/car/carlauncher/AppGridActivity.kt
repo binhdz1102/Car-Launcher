@@ -18,7 +18,7 @@ class AppGridActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             supportFragmentManager
                 .beginTransaction()
-                .replace(R.id.app_grid_container, AppGridFragment.newInstance(modeFrom(intent)))
+                .replace(R.id.fragmentContainer, AppGridFragment.newInstance(modeFrom(intent)))
                 .commitNow()
         }
     }
@@ -26,7 +26,7 @@ class AppGridActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        (supportFragmentManager.findFragmentById(R.id.app_grid_container) as? AppGridFragment)
+        (supportFragmentManager.findFragmentById(R.id.fragmentContainer) as? AppGridFragment)
             ?.updateMode(modeFrom(intent))
     }
 

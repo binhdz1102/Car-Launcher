@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The stock API 37/Baklava APK supplies a circular OEM primary-color plate
+    behind legacy (non-adaptive) launcher icons.  This is separate from the
+    item focus highlight and is required for byte-level rendered parity.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="1000dp" />
+    <solid android:color="@color/app_icon_background" />
+</shape>

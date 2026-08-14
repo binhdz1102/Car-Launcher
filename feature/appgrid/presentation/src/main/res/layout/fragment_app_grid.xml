@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.android.car.carlauncher.feature.appgrid.presentation.AospFocusArea xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@id/focus_area"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/app_grid_background"
-    android:paddingHorizontal="70dp"
     android:paddingVertical="0dp">
 
     <TextView
@@ -118,17 +118,39 @@
             android:textColor="@color/app_grid_text_primary" />
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/app_grid"
+    <FrameLayout
+        android:id="@id/apps_grid_background_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:paddingEnd="5dp"
-        android:paddingBottom="0dp"
+        android:gravity="center"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tos_banner" />
+        app:layout_constraintTop_toBottomOf="@id/tos_banner">
+
+        <LinearLayout
+            android:id="@id/apps_grid_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <com.android.car.carlauncher.feature.appgrid.presentation.AospAppGridRecyclerView
+                android:id="@id/apps_grid"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="70dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingBottom="0dp" />
+
+            <FrameLayout
+                android:id="@id/page_indicator_container"
+                android:layout_width="4dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="71dp" />
+        </LinearLayout>
+    </FrameLayout>
 
     <TextView
         android:id="@+id/app_grid_empty"
@@ -138,8 +160,8 @@
         android:textColor="@color/app_grid_text_secondary"
         android:textSize="18sp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/app_grid"
-        app:layout_constraintEnd_toEndOf="@id/app_grid"
-        app:layout_constraintStart_toStartOf="@id/app_grid"
-        app:layout_constraintTop_toTopOf="@id/app_grid" />
-</androidx.constraintlayout.widget.ConstraintLayout>
+        app:layout_constraintBottom_toBottomOf="@id/apps_grid_background_container"
+        app:layout_constraintEnd_toEndOf="@id/apps_grid_background_container"
+        app:layout_constraintStart_toStartOf="@id/apps_grid_background_container"
+        app:layout_constraintTop_toTopOf="@id/apps_grid_background_container" />
+</com.android.car.carlauncher.feature.appgrid.presentation.AospFocusArea>

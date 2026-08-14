@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AOSP AppGrid public resource names. The presentation module uses these names directly so
+         accessibility/UI-contract artifacts remain stable even though the implementation is
+         hosted by the migrated feature module. -->
+    <item type="id" name="app_item" />
+    <item type="id" name="app_icon" />
+    <item type="id" name="app_name" />
+    <item type="id" name="apps_grid" />
+    <item type="id" name="apps_grid_background" />
+    <item type="id" name="apps_grid_background_container" />
+    <item type="id" name="focus_area" />
+    <item type="id" name="page_indicator_container" />
+</resources>

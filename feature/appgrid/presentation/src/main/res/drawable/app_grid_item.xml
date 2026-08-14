@@ -1,23 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_focused="true">
-        <shape>
-            <corners android:radius="18dp" />
-            <solid android:color="@color/app_grid_focus_surface" />
-            <stroke
-                android:width="5dp"
-                android:color="@color/app_grid_focus_border" />
-        </shape>
-    </item>
-    <item android:state_pressed="true">
-        <shape>
-            <corners android:radius="18dp" />
-            <solid android:color="@color/app_grid_surface_pressed" />
-        </shape>
-    </item>
-    <item>
-        <shape>
-            <solid android:color="@android:color/transparent" />
-        </shape>
-    </item>
-</selector>
+<!--
+    AOSP creates the item highlight as a transparent transition layer.  A focused
+    tile is not painted merely because the RecyclerView enters rotary focus; the
+    visible highlight is driven by drag targeting.  Keeping the default layer
+    transparent avoids a false focus ring in HOME/App Grid screenshots while
+    preserving focusability for rotary navigation.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/transparent" />
+</shape>

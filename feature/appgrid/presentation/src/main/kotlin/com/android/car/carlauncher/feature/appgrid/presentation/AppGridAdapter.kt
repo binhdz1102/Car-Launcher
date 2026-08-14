@@ -10,7 +10,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.android.car.carlauncher.core.model.LauncherComponent
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridAvailability
@@ -44,7 +43,13 @@ class AppGridAdapter(
         position: Int,
     ) {
         val businessIndex = AppGridPaging.gridPositionToAdapterIndex(position, columns, rows, orientation, rtl)
-        holder.bind(items[businessIndex], onClick, onLongClick)
+        if (businessIndex in items.indices) {
+            holder.bind(items[businessIndex], onClick, onLongClick)
+        } else {
+            // AOSP pads the last page with empty holders. They must still occupy a grid cell, but
+            // must not be focusable/clickable or address a business item beyond the list.
+            holder.bindPlaceholder()
+        }
         holder.itemView.layoutParams =
             holder.itemView.layoutParams.apply {
                 width = cellWidth
@@ -52,43 +57,28 @@ class AppGridAdapter(
             }
     }
 
-    override fun getItemCount(): Int = items.size
+    override fun getItemCount(): Int = AppGridPaging.pagedItemCount(items.size, columns, rows)
 
     fun submitItems(next: List<AppGridItem>) {
         if (items == next) return
-        val previous = items.toList()
-        val diff =
-            DiffUtil.calculateDiff(
-                object : DiffUtil.Callback() {
-                    override fun getOldListSize(): Int = previous.size
-
-                    override fun getNewListSize(): Int = next.size
-
-                    override fun areItemsTheSame(
-                        oldItemPosition: Int,
-                        newItemPosition: Int,
-                    ): Boolean = previous[oldItemPosition].component == next[newItemPosition].component
-
-                    override fun areContentsTheSame(
-                        oldItemPosition: Int,
-                        newItemPosition: Int,
-                    ): Boolean = previous[oldItemPosition] == next[newItemPosition]
-                },
-            )
         items.clear()
         items.addAll(next)
-        diff.dispatchUpdatesTo(this)
+        // The adapter count includes page padding, while the source list does not. A plain
+        // dataset refresh keeps RecyclerView's old/new counts coherent across a page-boundary
+        // change and mirrors AOSP's padded grid update semantics.
+        notifyDataSetChanged()
     }
 
     fun move(
         fromPosition: Int,
         toPosition: Int,
     ): Boolean {
-        if (fromPosition !in items.indices || toPosition !in items.indices) return false
         val fromIndex = AppGridPaging.gridPositionToAdapterIndex(fromPosition, columns, rows, orientation, rtl)
-        val toIndex = AppGridPaging.gridPositionToAdapterIndex(toPosition, columns, rows, orientation, rtl)
+        if (fromIndex !in items.indices) return false
+        val mappedToIndex = AppGridPaging.gridPositionToAdapterIndex(toPosition, columns, rows, orientation, rtl)
+        val toIndex = mappedToIndex.coerceIn(0, items.size - 1)
         items.add(toIndex, items.removeAt(fromIndex))
-        notifyItemMoved(fromPosition, toPosition)
+        notifyDataSetChanged()
         return true
     }
 
@@ -121,8 +111,8 @@ class AppGridAdapter(
     inner class AppViewHolder(
         itemView: View,
     ) : RecyclerView.ViewHolder(itemView) {
-        private val icon: ImageView = itemView.findViewById(R.id.app_grid_icon)
-        private val label: TextView = itemView.findViewById(R.id.app_grid_label)
+        private val icon: ImageView = itemView.findViewById(R.id.app_icon)
+        private val label: TextView = itemView.findViewById(R.id.app_name)
         private val reason: TextView = itemView.findViewById(R.id.app_grid_reason)
 
         fun bind(
@@ -130,6 +120,9 @@ class AppGridAdapter(
             onClick: (AppGridItem) -> Unit,
             onLongClick: (AppGridItem) -> Boolean,
         ) {
+            itemView.alpha = 1f
+            itemView.isFocusable = true
+            itemView.isClickable = true
             label.text = item.label
             val enabled =
                 item.availability == AppGridAvailability.AVAILABLE ||
@@ -141,7 +134,31 @@ class AppGridAdapter(
             itemView.setOnClickListener { onClick(item) }
             itemView.setOnLongClickListener { onLongClick(item) }
             icon.setImageDrawable(loadIcon(itemView.context, item))
-            itemView.contentDescription = item.label
+            // AOSP exposes the label through app_name and makes the icon itself actionable.
+            // Keeping the root content description empty avoids a duplicate accessibility node.
+            itemView.contentDescription = null
+            icon.isClickable = true
+            icon.isFocusable = false
+            icon.setOnClickListener { onClick(item) }
+            icon.setOnLongClickListener { onLongClick(item) }
+        }
+
+        fun bindPlaceholder() {
+            itemView.alpha = 0f
+            itemView.isEnabled = false
+            itemView.isFocusable = false
+            itemView.isClickable = false
+            itemView.setOnClickListener(null)
+            itemView.setOnLongClickListener(null)
+            itemView.contentDescription = null
+            icon.isClickable = false
+            icon.isFocusable = false
+            icon.setOnClickListener(null)
+            icon.setOnLongClickListener(null)
+            icon.setImageDrawable(null)
+            label.text = null
+            reason.text = null
+            reason.visibility = View.GONE
         }
 
         private fun loadIcon(
@@ -155,11 +172,15 @@ class AppGridAdapter(
                 else -> {
                     // Stock AppGridRepository obtains activity icons from LauncherActivityInfo,
                     // including the profile badge/density normalization of getBadgedIcon(0).
-                    val launcherInfo =
+                    val launcherInfos =
                         context
                             .getSystemService(LauncherApps::class.java)
-                            ?.getActivityList(component.packageName, Process.myUserHandle())
-                            ?.firstOrNull { it.componentName == component }
+                            // LauncherActivityInfo owns AAOS badging and density normalization.
+                            // Query the complete user inventory: package-filtered queries can omit
+                            // alias activities on API 37, which silently falls back to the raw
+                            // PackageManager icon and loses the stock badge/background.
+                            ?.getActivityList(null, Process.myUserHandle())
+                    val launcherInfo = launcherInfos?.firstOrNull { it.componentName == component }
                     launcherInfo?.getBadgedIcon(0)
                         ?: context.packageManager.getActivityInfo(component, 0).loadIcon(context.packageManager)
                 }

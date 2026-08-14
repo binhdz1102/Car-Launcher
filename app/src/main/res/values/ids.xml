@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppGrid host IDs are part of the stock activity/resource contract. -->
+    <item type="id" name="car_ui_base_layout_content_container" />
+    <item type="id" name="fragmentContainer" />
+</resources>

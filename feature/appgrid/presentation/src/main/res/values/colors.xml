@@ -8,4 +8,6 @@
     <color name="app_grid_tos_surface">#2B303A</color>
     <color name="app_grid_text_primary">#C3C7CB</color>
     <color name="app_grid_text_secondary">#BCC4C8</color>
+    <!-- Matches stock oem_default_color_primary_palette_80 on the AVD. -->
+    <color name="app_icon_background">#91CEF5</color>
 </resources>

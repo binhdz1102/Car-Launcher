@@ -14,6 +14,24 @@ object AppGridPaging {
         return columns * rows
     }
 
+    /**
+     * Returns the RecyclerView item count required to keep every page rectangular.
+     *
+     * AOSP binds empty view holders for the unused cells on the last page. Keeping those cells in
+     * the adapter is important: the grid position/index mapping is page based and otherwise a
+     * partial page can address an item past the end of the business list.
+     */
+    fun pagedItemCount(
+        itemCount: Int,
+        columns: Int,
+        rows: Int,
+    ): Int {
+        require(itemCount >= 0) { "Item count must be non-negative." }
+        val size = pageSize(columns, rows)
+        if (itemCount == 0) return 0
+        return ((itemCount + size - 1) / size) * size
+    }
+
     fun adapterIndexToGridPosition(
         index: Int,
         columns: Int,
