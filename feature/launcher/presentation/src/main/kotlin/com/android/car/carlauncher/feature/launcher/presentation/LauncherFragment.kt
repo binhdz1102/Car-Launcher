@@ -28,6 +28,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@Suppress("TooManyFunctions")
 class LauncherFragment : Fragment(R.layout.fragment_launcher) {
     @Inject lateinit var carConnection: CarServiceConnection
 
@@ -91,6 +92,8 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         taskHost?.onHostNewIntent()
         viewModel.handleHostIntent(intent)
     }
+
+    fun embeddedTaskId(): Int? = taskHost?.embeddedTaskId
 
     private fun bindActions(view: View) {
         view.findViewById<View>(R.id.open_apps).setOnClickListener { openAppGrid() }

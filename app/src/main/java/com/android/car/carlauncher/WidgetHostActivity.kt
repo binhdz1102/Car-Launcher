@@ -36,7 +36,6 @@ open class WidgetHostActivity : AppCompatActivity() {
         container = findViewById(R.id.widget_container)
         widgetManager = AppWidgetManager.getInstance(this)
         widgetHost = AppWidgetHost(this, resources.getInteger(R.integer.config_appwidget_host_id))
-        viewModel.bind(currentDisplayTarget())
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.state.collect { loadConfiguredWidgets() }
@@ -47,6 +46,7 @@ open class WidgetHostActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         runCatching { widgetHost.startListening() }
+        viewModel.bind(currentDisplayTarget())
     }
 
     override fun onStop() {

@@ -66,6 +66,7 @@ sealed interface HomeTaskViewEvent {
 interface HomeTaskViewHost {
     val view: FrameLayout
     val events: SharedFlow<HomeTaskViewEvent>
+    val embeddedTaskId: Int?
 
     fun load(target: HomeEmbeddedTaskTarget)
 
@@ -89,6 +90,8 @@ class AndroidHomeTaskViewHost(
     private val dispatchers: CoroutineDispatchers,
 ) : HomeTaskViewHost {
     override val view = FrameLayout(activity).apply { setBackgroundColor(Color.BLACK) }
+    override var embeddedTaskId: Int? = null
+        private set
 
     private val mutableEvents = MutableSharedFlow<HomeTaskViewEvent>(replay = 1, extraBufferCapacity = 16)
     override val events: SharedFlow<HomeTaskViewEvent> = mutableEvents.asSharedFlow()
@@ -352,6 +355,7 @@ class AndroidHomeTaskViewHost(
             override fun onTaskAppeared(taskInfo: ActivityManager.RunningTaskInfo) {
                 taskTimeoutJob?.cancel()
                 awaitingReplacement = false
+                embeddedTaskId = taskInfo.taskId
                 taskView?.updateWindowBounds()
                 taskComponent(taskInfo)?.let { component ->
                     mutableEvents.tryEmit(
@@ -365,6 +369,7 @@ class AndroidHomeTaskViewHost(
 
             override fun onTaskInfoChanged(taskInfo: ActivityManager.RunningTaskInfo) {
                 taskView?.updateWindowBounds()
+                embeddedTaskId = taskInfo.taskId
                 taskComponent(taskInfo)?.let { component ->
                     mutableEvents.tryEmit(
                         HomeTaskViewEvent.TaskInfoChanged(taskInfo.taskId, component),
@@ -377,6 +382,7 @@ class AndroidHomeTaskViewHost(
             }
 
             override fun onTaskVanished(taskInfo: ActivityManager.RunningTaskInfo) {
+                if (embeddedTaskId == taskInfo.taskId) embeddedTaskId = null
                 if (awaitingReplacement || released) return
                 val target = requestedTarget ?: return
                 if (target.type == HomeEmbeddedTargetType.NAVIGATION) {
@@ -454,6 +460,7 @@ class AndroidHomeTaskViewHost(
 
     private fun releaseTaskView(releaseRemote: Boolean = true) {
         taskTimeoutJob?.cancel()
+        embeddedTaskId = null
         taskView?.let { remoteTaskView ->
             view.removeView(remoteTaskView)
             if (releaseRemote) remoteTaskView.release()
