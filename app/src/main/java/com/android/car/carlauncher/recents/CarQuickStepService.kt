@@ -48,6 +48,7 @@ class CarQuickStepService : Service() {
         startActivity(intent)
     }
 
+    @Suppress("TooManyFunctions") // The shared SystemUI binder contract requires these callbacks.
     private inner class CarLauncherProxyBinder : ILauncherProxy.Stub() {
         override fun onActiveNavBarRegionChanges(activeRegion: Region?) = Unit
 

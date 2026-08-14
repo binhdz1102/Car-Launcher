@@ -34,6 +34,7 @@ class DockPackageChangeReceiver(
     }
 
     companion object {
+        private const val API_33 = 33
         private const val USER_ID_RANGE = 100_000
 
         @JvmStatic
@@ -49,7 +50,7 @@ class DockPackageChangeReceiver(
                     addAction(Intent.ACTION_PACKAGE_CHANGED)
                     addDataScheme("package")
                 }
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
+            if (android.os.Build.VERSION.SDK_INT >= API_33) {
                 context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
             } else {
                 @Suppress("DEPRECATION")

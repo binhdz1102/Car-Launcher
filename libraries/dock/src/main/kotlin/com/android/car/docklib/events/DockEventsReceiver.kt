@@ -19,7 +19,7 @@ class DockEventsReceiver(
         intent: Intent,
     ) {
         val component =
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
+            if (android.os.Build.VERSION.SDK_INT >= API_33) {
                 intent.getParcelableExtra(
                     DockEventSenderHelper.EXTRA_COMPONENT,
                     ComponentName::class.java,
@@ -38,6 +38,8 @@ class DockEventsReceiver(
     }
 
     companion object {
+        private const val API_33 = 33
+
         @JvmStatic
         fun registerDockReceiver(
             context: Context,
@@ -50,7 +52,7 @@ class DockEventsReceiver(
                     addAction(DockEvent.PIN.toString())
                     addAction(DockEvent.UNPIN.toString())
                 }
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
+            if (android.os.Build.VERSION.SDK_INT >= API_33) {
                 context.registerReceiver(
                     receiver,
                     filter,

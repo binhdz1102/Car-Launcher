@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -160,6 +161,12 @@ internal object AppGridOrderProto {
         encoded.addAll(payload)
         val temporaryFile = File(file.parentFile, "${file.name}.new")
         temporaryFile.outputStream().use { output -> output.write(encoded.toByteArray()) }
+
+        fun failWrite(exception: Exception): Nothing {
+            temporaryFile.delete()
+            throw IllegalStateException("Unable to atomically write ${file.name}", exception)
+        }
+
         try {
             try {
                 Files.move(
@@ -175,9 +182,10 @@ internal object AppGridOrderProto {
                     StandardCopyOption.REPLACE_EXISTING,
                 )
             }
-        } catch (throwable: Throwable) {
-            temporaryFile.delete()
-            throw IllegalStateException("Unable to atomically write ${file.name}", throwable)
+        } catch (exception: IOException) {
+            failWrite(exception)
+        } catch (exception: SecurityException) {
+            failWrite(exception)
         }
     }
 

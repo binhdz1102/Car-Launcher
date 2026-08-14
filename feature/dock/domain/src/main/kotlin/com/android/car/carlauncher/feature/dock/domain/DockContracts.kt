@@ -44,15 +44,15 @@ object DockPolicy {
         maxItems: Int,
     ): Int? {
         require(maxItems > 0) { "maxItems must be positive" }
-        items
-            .indexOfFirst { it.component.packageName == component.packageName }
-            .takeIf { it >= 0 }
-            ?.let { return it }
-        items
-            .indexOfFirst { it.kind == DockItemKind.DYNAMIC || it.kind == DockItemKind.RECENT }
-            .takeIf { it >= 0 }
-            ?.let { return it }
-        return if (items.size < maxItems) items.size else null
+        val packageIndex = items.indexOfFirst { it.component.packageName == component.packageName }
+        val dynamicIndex =
+            items.indexOfFirst { it.kind == DockItemKind.DYNAMIC || it.kind == DockItemKind.RECENT }
+        return when {
+            packageIndex >= 0 -> packageIndex
+            dynamicIndex >= 0 -> dynamicIndex
+            items.size < maxItems -> items.size
+            else -> null
+        }
     }
 
     fun canLaunch(

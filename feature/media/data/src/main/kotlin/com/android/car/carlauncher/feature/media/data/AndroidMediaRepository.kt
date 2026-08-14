@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.MediaMetadata
 import android.media.session.MediaController
+import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.SystemClock
@@ -282,74 +283,84 @@ class AndroidMediaRepository
         private fun refreshPlayback() {
             val active = controller
             if (active == null) {
-                progressJob?.cancel()
-                mutablePlayback.value = MediaPlayback()
-                mutableQueue.value = emptyList()
-                mutableHistory.value = emptyList()
+                clearPlayback()
                 return
             }
+            val playback = buildPlayback(active)
+            mutablePlayback.value = playback
+            updateHistory(active, playback)
+            mutableQueue.value = active.queue.orEmpty().map(::toQueueItem)
+            updateProgressLoop()
+        }
+
+        private fun clearPlayback() {
+            progressJob?.cancel()
+            mutablePlayback.value = MediaPlayback()
+            mutableQueue.value = emptyList()
+            mutableHistory.value = emptyList()
+        }
+
+        private fun buildPlayback(active: MediaController): MediaPlayback {
             val metadata = active.metadata
             val state = active.playbackState
             val actions = state?.actions ?: 0L
-            mutablePlayback.value =
-                MediaPlayback(
-                    sourcePackage = active.packageName,
-                    sourceComponent = sourceComponentFor(active.packageName),
-                    sourceLabel = context.applicationLabel(active.packageName),
-                    title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty(),
-                    artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty(),
-                    artwork =
-                        artworkCache.encode(
-                            metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
-                                ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART),
-                        ),
-                    isPlaying = state?.state == PlaybackState.STATE_PLAYING,
-                    positionMs = state?.position ?: 0L,
-                    durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L,
-                    canSkipPrevious = actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS != 0L,
-                    canSkipNext = actions and PlaybackState.ACTION_SKIP_TO_NEXT != 0L,
-                    canSeek = actions and PlaybackState.ACTION_SEEK_TO != 0L,
-                    customActions =
-                        state?.customActions.orEmpty().mapNotNull { action ->
-                            action.action?.takeIf(String::isNotBlank)?.let { actionId ->
-                                MediaCustomAction(
-                                    action = actionId,
-                                    title = action.name?.toString().orEmpty(),
-                                )
-                            }
-                        },
-                )
-            val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
-            if (title.isNotBlank()) {
-                val historyItem =
-                    MediaHistoryItem(
-                        id = "${active.packageName}:$title",
-                        sourcePackage = active.packageName,
-                        sourceLabel = context.applicationLabel(active.packageName),
-                        title = title,
-                        subtitle = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty(),
-                        artwork = mutablePlayback.value.artwork,
-                    )
-                mutableHistory.update { current ->
-                    listOf(historyItem) + current.filterNot { it.id == historyItem.id }
-                }
-            }
-            mutableQueue.value =
-                active.queue.orEmpty().map { item ->
-                    MediaQueueItem(
-                        id = item.queueId,
-                        title =
-                            item.description.title
-                                ?.toString()
-                                .orEmpty(),
-                        subtitle =
-                            item.description.subtitle
-                                ?.toString()
-                                .orEmpty(),
-                    )
-                }
-            updateProgressLoop()
+            return MediaPlayback(
+                sourcePackage = active.packageName,
+                sourceComponent = sourceComponentFor(active.packageName),
+                sourceLabel = context.applicationLabel(active.packageName),
+                title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty(),
+                artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty(),
+                artwork =
+                    artworkCache.encode(
+                        metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+                            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART),
+                    ),
+                isPlaying = state?.state == PlaybackState.STATE_PLAYING,
+                positionMs = state?.position ?: 0L,
+                durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L,
+                canSkipPrevious = actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS != 0L,
+                canSkipNext = actions and PlaybackState.ACTION_SKIP_TO_NEXT != 0L,
+                canSeek = actions and PlaybackState.ACTION_SEEK_TO != 0L,
+                customActions = state?.customActions.orEmpty().mapNotNull(::toCustomAction),
+            )
         }
+
+        private fun toCustomAction(action: PlaybackState.CustomAction): MediaCustomAction? =
+            action.action?.takeIf(String::isNotBlank)?.let { actionId ->
+                MediaCustomAction(
+                    action = actionId,
+                    title = action.name?.toString().orEmpty(),
+                )
+            }
+
+        private fun updateHistory(
+            active: MediaController,
+            playback: MediaPlayback,
+        ) {
+            val title = playback.title
+            if (title.isBlank()) return
+            val historyItem =
+                MediaHistoryItem(
+                    id = "${active.packageName}:$title",
+                    sourcePackage = active.packageName,
+                    sourceLabel = context.applicationLabel(active.packageName),
+                    title = title,
+                    subtitle = playback.artist,
+                    artwork = playback.artwork,
+                )
+            mutableHistory.update { current ->
+                listOf(historyItem) + current.filterNot { it.id == historyItem.id }
+            }
+        }
+
+        private fun toQueueItem(item: MediaSession.QueueItem): MediaQueueItem =
+            MediaQueueItem(
+                id = item.queueId,
+                title = toText(item.description.title),
+                subtitle = toText(item.description.subtitle),
+            )
+
+        private fun toText(value: CharSequence?): String = value?.toString() ?: ""
 
         /** Media callbacks do not publish a position every tick; keep the seek bar smooth. */
         private fun updateProgressLoop() {

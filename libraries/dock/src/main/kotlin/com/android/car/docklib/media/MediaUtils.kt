@@ -16,11 +16,10 @@ object MediaUtils {
     const val EXTRA_MEDIA_COMPONENT = "android.car.media.extra.MEDIA_COMPONENT"
 
     @JvmStatic
-    fun getMediaComponentName(taskInfo: ActivityManager.RunningTaskInfo): ComponentName? {
-        val data = taskInfo.baseIntent.data ?: return null
-        if (data.scheme != CAR_MEDIA_DATA_SCHEME) return null
-        return ComponentName.unflattenFromString(data.schemeSpecificPart.removePrefix("/"))
-    }
+    fun getMediaComponentName(taskInfo: ActivityManager.RunningTaskInfo): ComponentName? =
+        taskInfo.baseIntent.data
+            ?.takeIf { it.scheme == CAR_MEDIA_DATA_SCHEME }
+            ?.let { data -> ComponentName.unflattenFromString(data.schemeSpecificPart.removePrefix("/")) }
 
     @JvmStatic
     fun isMediaComponent(component: ComponentName?): Boolean = component == CAR_MEDIA_ACTIVITY

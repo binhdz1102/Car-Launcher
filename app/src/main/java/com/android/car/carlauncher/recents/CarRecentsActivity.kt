@@ -73,7 +73,13 @@ class CarRecentsActivity : AppCompatActivity() {
                 viewModel.events.collect { event ->
                     when (event) {
                         RecentsEvent.Cleared -> launchHome()
-                        is RecentsEvent.Error -> Toast.makeText(this@CarRecentsActivity, event.message, Toast.LENGTH_SHORT).show()
+                        is RecentsEvent.Error ->
+                            Toast
+                                .makeText(
+                                    this@CarRecentsActivity,
+                                    event.message,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                     }
                 }
             }

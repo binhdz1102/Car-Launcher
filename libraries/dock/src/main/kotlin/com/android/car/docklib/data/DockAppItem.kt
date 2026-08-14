@@ -30,6 +30,7 @@ data class DockAppItem(
     }
 
     companion object {
+        private const val MAX_COLOR_COMPONENT = 255
         private const val DEFAULT_ICON_COLOR_SCRIM = 0x66FFFFFF
 
         /** Composes an icon color with the supplied scrim without depending on Launcher3. */
@@ -39,12 +40,12 @@ data class DockAppItem(
             iconColorScrim: Int = DEFAULT_ICON_COLOR_SCRIM,
         ): Int {
             val alpha = Color.alpha(iconColorScrim)
-            val inverse = 255 - alpha
+            val inverse = MAX_COLOR_COMPONENT - alpha
             return Color.argb(
-                255,
-                (Color.red(iconColorScrim) * alpha + Color.red(iconColor) * inverse) / 255,
-                (Color.green(iconColorScrim) * alpha + Color.green(iconColor) * inverse) / 255,
-                (Color.blue(iconColorScrim) * alpha + Color.blue(iconColor) * inverse) / 255,
+                MAX_COLOR_COMPONENT,
+                (Color.red(iconColorScrim) * alpha + Color.red(iconColor) * inverse) / MAX_COLOR_COMPONENT,
+                (Color.green(iconColorScrim) * alpha + Color.green(iconColor) * inverse) / MAX_COLOR_COMPONENT,
+                (Color.blue(iconColorScrim) * alpha + Color.blue(iconColor) * inverse) / MAX_COLOR_COMPONENT,
             )
         }
     }

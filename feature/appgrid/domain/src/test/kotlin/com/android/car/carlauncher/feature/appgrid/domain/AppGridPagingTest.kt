@@ -10,7 +10,10 @@ class AppGridPagingTest {
         listOf(false, true).forEach { rtl ->
             (0 until 24).forEach { index ->
                 val grid = AppGridPaging.adapterIndexToGridPosition(index, 5, 4, AppGridOrientation.HORIZONTAL, rtl)
-                assertEquals(index, AppGridPaging.gridPositionToAdapterIndex(grid, 5, 4, AppGridOrientation.HORIZONTAL, rtl))
+                assertEquals(
+                    index,
+                    AppGridPaging.gridPositionToAdapterIndex(grid, 5, 4, AppGridOrientation.HORIZONTAL, rtl),
+                )
             }
         }
     }
