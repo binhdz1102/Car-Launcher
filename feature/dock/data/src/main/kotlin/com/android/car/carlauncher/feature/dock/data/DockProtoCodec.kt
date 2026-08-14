@@ -17,19 +17,21 @@ internal object DockProtoCodec {
                 }
             }.toByteArray()
 
-    fun decode(bytes: ByteArray): List<LauncherComponent> {
-        val result = mutableListOf<Pair<Int, LauncherComponent>>()
-        var offset = 0
-        while (offset < bytes.size) {
-            val (length, nextOffset) = readVarint(bytes, offset)
-            offset = nextOffset
-            val end = (offset + length.toInt()).coerceAtMost(bytes.size)
-            val message = bytes.copyOfRange(offset, end)
-            decodeMessage(message)?.let(result::add)
-            offset = end
-        }
-        return result.sortedBy { it.first }.map { it.second }
-    }
+    fun decode(bytes: ByteArray): List<LauncherComponent> =
+        runCatching {
+            val result = mutableListOf<Pair<Int, LauncherComponent>>()
+            var offset = 0
+            while (offset < bytes.size) {
+                val (length, nextOffset) = readVarint(bytes, offset)
+                require(length <= bytes.size - nextOffset) { "Truncated Dock protobuf message" }
+                offset = nextOffset
+                val end = offset + length.toInt()
+                val message = bytes.copyOfRange(offset, end)
+                result += requireNotNull(decodeMessage(message)) { "Invalid Dock protobuf message" }
+                offset = end
+            }
+            result.sortedBy { it.first }.map { it.second }
+        }.getOrDefault(emptyList())
 
     private fun encodeMessage(
         position: Int,
@@ -60,7 +62,8 @@ internal object DockProtoCodec {
                 FIELD_PACKAGE.toInt(), FIELD_CLASS.toInt() -> {
                     val (length, lengthOffset) = readVarint(bytes, offset)
                     offset = lengthOffset
-                    val end = (offset + length.toInt()).coerceAtMost(bytes.size)
+                    require(length <= bytes.size - offset) { "Truncated Dock protobuf field" }
+                    val end = offset + length.toInt()
                     val value = String(bytes, offset, end - offset, StandardCharsets.UTF_8)
                     if (tag.toInt() == FIELD_PACKAGE.toInt()) packageName = value else className = value
                     offset = end
@@ -110,7 +113,7 @@ internal object DockProtoCodec {
             if (current and VARINT_CONTINUATION.toInt() == 0) return value to offset
             shift += 7
         }
-        return 0L to bytes.size
+        error("Malformed Dock protobuf varint")
     }
 
     private const val FIELD_POSITION = 8L

@@ -20,4 +20,16 @@ class DockProtoCodecTest {
     fun emptyOrderEncodesToEmptyFile() {
         assertEquals(emptyList<LauncherComponent>(), DockProtoCodec.decode(DockProtoCodec.encode(emptyList())))
     }
+
+    @Test
+    fun truncatedMessageFallsBackToEmptyOrder() {
+        val encoded = DockProtoCodec.encode(listOf(LauncherComponent("com.example.maps", ".Maps", 0)))
+
+        assertEquals(emptyList<LauncherComponent>(), DockProtoCodec.decode(encoded.copyOf(encoded.size - 1)))
+    }
+
+    @Test
+    fun corruptVarintFallsBackToEmptyOrder() {
+        assertEquals(emptyList<LauncherComponent>(), DockProtoCodec.decode(byteArrayOf(0x80.toByte())))
+    }
 }

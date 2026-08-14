@@ -8,7 +8,10 @@ param(
     [string]$Serial = "emulator-5554",
     [int]$UserId = 10,
     [string]$ArtifactsRoot,
+    [string]$InstrumentationApk,
     [switch]$Install,
+    [switch]$RequireInstrumentation,
+    [switch]$RequireFixtures,
     [ValidateSet("home", "app-grid", "recents", "calm-mode", "widget-host", "map-tos")]
     [string]$Scenario = "home",
     [Alias("LaunchHome")]
@@ -67,6 +70,9 @@ function Get-Aapt2 {
 }
 
 function Dismiss-InitialUserNotice {
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
     # The development AVD may show CarService's KitchenSink user notice on the first
     # activity launch. It belongs to the image, not Car Launcher, and would otherwise
     # obscure both golden screenshots. Detect it through the accessibility tree and
@@ -85,26 +91,29 @@ function Dismiss-InitialUserNotice {
         return ""
     }
 
-    Start-Sleep -Milliseconds 750
-    for ($attempt = 0; $attempt -lt 3; $attempt++) {
-        $noticeXml = Read-NoticeTree
-        if ([string]::IsNullOrWhiteSpace($noticeXml)) { return }
-        $dismissNode = [regex]::Match($noticeXml, 'text="Dismiss for now"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
-        if ($dismissNode.Success) {
-            $left = [int]$dismissNode.Groups[1].Value
-            $top = [int]$dismissNode.Groups[2].Value
-            $right = [int]$dismissNode.Groups[3].Value
-            $bottom = [int]$dismissNode.Groups[4].Value
-            $x = [int](($left + $right) / 2)
-            $y = [int](($top + $bottom) / 2)
-            & adb -s $Serial shell input tap $x $y | Out-Null
-            Start-Sleep -Milliseconds 1200
-            continue
-        }
-        if ($noticeXml -notmatch "Dismiss for now") { return }
         Start-Sleep -Milliseconds 750
+        for ($attempt = 0; $attempt -lt 3; $attempt++) {
+            $noticeXml = Read-NoticeTree
+            if ([string]::IsNullOrWhiteSpace($noticeXml)) { return }
+            $dismissNode = [regex]::Match($noticeXml, 'text="Dismiss for now"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
+            if ($dismissNode.Success) {
+                $left = [int]$dismissNode.Groups[1].Value
+                $top = [int]$dismissNode.Groups[2].Value
+                $right = [int]$dismissNode.Groups[3].Value
+                $bottom = [int]$dismissNode.Groups[4].Value
+                $x = [int](($left + $right) / 2)
+                $y = [int](($top + $bottom) / 2)
+                & adb -s $Serial shell input tap $x $y | Out-Null
+                Start-Sleep -Milliseconds 1200
+                continue
+            }
+            if ($noticeXml -notmatch "Dismiss for now") { return }
+            Start-Sleep -Milliseconds 750
+        }
+        Start-Sleep -Milliseconds 750
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
     }
-    Start-Sleep -Milliseconds 750
 }
 
 function Stop-BackgroundScenarioTasks {
@@ -144,6 +153,12 @@ function Ensure-ScenarioForeground([string]$ScenarioCommand, [string]$Component)
     return $false
 }
 
+function Test-FixturePrecondition {
+    $fixtureComponent = "com.android.car.carlauncher.fixture/.FixtureMapActivity"
+    $resolution = @(& adb -s $Serial shell cmd package resolve-activity --user $UserId --brief -n $fixtureComponent 2>&1)
+    return $LASTEXITCODE -eq 0 -and (($resolution -join "`n") -match "com\.android\.car\.carlauncher\.fixture")
+}
+
 if (-not (Test-Path -LiteralPath $ApkPath)) {
     throw "APK is missing: $ApkPath"
 }
@@ -160,6 +175,15 @@ New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 $scenarioComponent = Get-ScenarioComponent $Scenario
 $scenarioCommand = $null
 $foregroundMatched = $true
+$fixtureReady = $true
+$instrumentationResult = [ordered]@{
+    required = [bool]$RequireInstrumentation
+    status = if ($RequireInstrumentation) { "INVALID" } else { "SKIPPED" }
+    spec = $null
+    exitCode = $null
+    output = ""
+    reason = if ($RequireInstrumentation) { "Instrumentation APK was not supplied." } else { "Not requested." }
+}
 
 if ($Install) {
     # The API 37 AVD's streamed PackageInstaller transport is unreliable. Using adb's
@@ -171,8 +195,47 @@ if ($Install) {
     if ($LASTEXITCODE -ne 0) { throw "APK installation failed for $Label." }
 }
 
-# Isolate the evidence window from installation output and stale processes.
-& adb -s $Serial logcat -c | Out-Null
+if ($RequireFixtures) {
+    $fixtureReady = Test-FixturePrecondition
+}
+
+if (-not [string]::IsNullOrWhiteSpace($InstrumentationApk)) {
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        if (-not (Test-Path -LiteralPath $InstrumentationApk)) {
+            $instrumentationResult.status = "INVALID"
+            $instrumentationResult.reason = "Instrumentation APK is missing: $InstrumentationApk"
+        } else {
+            $installOutput = @(& adb -s $Serial install --no-streaming -r --user $UserId $InstrumentationApk 2>&1)
+            if ($LASTEXITCODE -ne 0) {
+                $instrumentationResult.status = "INVALID"
+                $instrumentationResult.reason = "Instrumentation APK installation failed."
+                $instrumentationResult.output = ($installOutput -join "`n")
+            } else {
+                $instrumentationList = @(& adb -s $Serial shell pm list instrumentation 2>&1)
+                $instrumentationText = $instrumentationList -join "`n"
+                $specMatch = [regex]::Match(
+                    $instrumentationText,
+                    "instrumentation:([^\s]+)\s+\(target=com\.android\.car\.carlauncher\)"
+                )
+                if (-not $specMatch.Success) {
+                    $instrumentationResult.status = "INVALID"
+                    $instrumentationResult.reason = "No instrumentation targeting com.android.car.carlauncher is installed."
+                    $instrumentationResult.output = $instrumentationText
+                } else {
+                    $instrumentationResult.spec = $specMatch.Groups[1].Value
+                }
+            }
+        }
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+}
+
+# Isolate the evidence window from installation output and stale processes. Clear every buffer;
+# the default-buffer-only form leaves old ANR records on the API 37 image.
+& adb -s $Serial shell logcat -b all -c | Out-Null
 
 $aapt2 = Get-Aapt2
 & $aapt2 dump badging $ApkPath | Set-Content -LiteralPath (Join-Path $outputDir "apk-badging.txt")
@@ -225,23 +288,86 @@ foreach ($entry in $commands.GetEnumerator()) {
     & adb -s $Serial shell $entry.Value | Set-Content -LiteralPath (Join-Path $outputDir $entry.Key)
 }
 
+$activityDump = Get-Content -LiteralPath (Join-Path $outputDir "activity.txt") -Raw
+$topResumedMatch = [regex]::Match($activityDump, "topResumedActivity=.*?\s(?<component>[^\s}]+/[^\s}]+)")
+$taskMap = @{}
+foreach ($taskMatch in [regex]::Matches($activityDump, "Task\{[^\r\n]*?#(?<taskId>\d+)[^\r\n]*?(?:displayId=(?<displayId>\d+))?")) {
+    $taskId = [int]$taskMatch.Groups["taskId"].Value
+    if (-not $taskMap.ContainsKey($taskId)) {
+        $taskMap[$taskId] = [PSCustomObject]@{
+            taskId = $taskId
+            displayId = if ($taskMatch.Groups["displayId"].Success) {
+                [int]$taskMatch.Groups["displayId"].Value
+            } else {
+                $null
+            }
+        }
+    }
+}
+$taskRecords = @($taskMap.Values | Sort-Object taskId)
+$mapTaskIds = @(
+    [regex]::Matches(
+        $activityDump,
+        "com\.android\.(?:car\.mapsplaceholder|car\.maps)[^\r\n]*?t(?<taskId>\d+)"
+    ) |
+        ForEach-Object { $_.Groups["taskId"].Value } |
+        Sort-Object -Unique
+)
+$mapTaskCount = $mapTaskIds.Count
+$topologyValid = $foregroundMatched -and $mapTaskCount -le 1
+$taskTopology = [ordered]@{
+    topResumedActivity = if ($topResumedMatch.Success) { $topResumedMatch.Groups["component"].Value } else { $null }
+    tasks = $taskRecords
+    mapTaskCount = $mapTaskCount
+    duplicateMapTaskFree = $mapTaskCount -le 1
+}
+
 Invoke-AdbBinary @("-s", $Serial, "exec-out", "screencap", "-p") (Join-Path $outputDir "screen.png")
 & adb -s $Serial shell uiautomator dump /sdcard/window.xml | Out-Null
 & adb -s $Serial exec-out cat /sdcard/window.xml | Set-Content -LiteralPath (Join-Path $outputDir "window.xml")
-& adb -s $Serial logcat -d -v threadtime | Select-Object -Last 3000 |
+& adb -s $Serial shell logcat -b all -d -v threadtime | Select-Object -Last 3000 |
     Set-Content -LiteralPath (Join-Path $outputDir "logcat.txt")
 
 $logLines = @(Get-Content -LiteralPath (Join-Path $outputDir "logcat.txt") -ErrorAction SilentlyContinue)
 $fatalCount = @($logLines | Select-String -Pattern "FATAL EXCEPTION|Fatal signal|Process .* has died").Count
 $anrCount = @($logLines | Select-String -Pattern "ANR in |Input dispatching timed out").Count
 $securityExceptionCount = @($logLines | Select-String -Pattern "SecurityException").Count
-$status = if (-not $foregroundMatched -or $fatalCount -gt 0 -or $anrCount -gt 0 -or $securityExceptionCount -gt 0) {
+$instrumentationPassed = $true
+if (-not [string]::IsNullOrWhiteSpace($instrumentationResult.spec)) {
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $instrumentationOutput = @(& adb -s $Serial shell am instrument -w -r $instrumentationResult.spec 2>&1)
+        $instrumentationResult.exitCode = $LASTEXITCODE
+        $instrumentationResult.output = ($instrumentationOutput -join "`n")
+        $instrumentationPassed =
+            $LASTEXITCODE -eq 0 -and
+            $instrumentationResult.output -notmatch "INSTRUMENTATION_FAILED|FAILURES!!!"
+        $instrumentationResult.status = if ($instrumentationPassed) { "PASS" } else { "FAIL" }
+        if (-not $instrumentationPassed) {
+            $instrumentationResult.reason = "Instrumentation reported a failure."
+        } else {
+            $instrumentationResult.reason = ""
+        }
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+}
+$status = if (-not $foregroundMatched -or -not $topologyValid -or -not $fixtureReady -or
+    ($RequireInstrumentation -and (-not $instrumentationPassed -or $instrumentationResult.status -ne "PASS")) -or
+    $fatalCount -gt 0 -or $anrCount -gt 0 -or $securityExceptionCount -gt 0) {
     "INVALID"
 } else {
     "PASS"
 }
-$statusReason = if (-not $foregroundMatched) {
+$statusReason = if (-not $fixtureReady) {
+    "Required fixture APK is not resolvable for the requested user."
+} elseif (-not $topologyValid) {
+    "Task topology is invalid: the expected foreground or duplicate map-task invariant failed."
+} elseif (-not $foregroundMatched) {
     "Expected scenario component was not top-resumed after retries."
+} elseif ($RequireInstrumentation -and $instrumentationResult.status -ne "PASS") {
+    $instrumentationResult.reason
 } elseif ($fatalCount -gt 0 -or $anrCount -gt 0 -or $securityExceptionCount -gt 0) {
     "Scenario log window contains a fatal, ANR, or security failure."
 } else {
@@ -266,17 +392,22 @@ $actionList = if ($null -eq $scenarioCommand) { @() } else { @($scenarioCommand)
         userId = $UserId
         snapshotRequired = $true
         installRequested = [bool]$Install
+        fixtureReady = $fixtureReady
+        instrumentationRequired = [bool]$RequireInstrumentation
+        instrumentationApk = if ([string]::IsNullOrWhiteSpace($InstrumentationApk)) { $null } else { (Resolve-Path -LiteralPath $InstrumentationApk -ErrorAction SilentlyContinue).Path }
     }
     actions = $actionList
     assertions = [ordered]@{
         foregroundComponent = $scenarioComponent
         foregroundMatched = $foregroundMatched
+        fixtureReady = $fixtureReady
+        topologyValid = $topologyValid
         fatalCount = $fatalCount
         anrCount = $anrCount
         securityExceptionCount = $securityExceptionCount
     }
-    taskTopology = @("activity.txt", "window.txt", "display.txt", "package.txt")
-    instrumentation = @()
+    taskTopology = $taskTopology
+    instrumentation = $instrumentationResult
     logWindow = [ordered]@{
         file = "logcat.txt"
         lines = $logLines.Count

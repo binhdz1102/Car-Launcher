@@ -10,6 +10,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -88,8 +91,8 @@ class DualAppGridOrderStore
         }
     }
 
-/** Minimal, dependency-free codec for the stock delimited `LauncherItemListMessage` protobuf. */
-private object AppGridOrderProto {
+/** Internal codec for the stock `LauncherItemListMessage` order.data format. */
+internal object AppGridOrderProto {
     private const val OUTER_ITEM_FIELD = 1
     private const val PACKAGE_FIELD = 1
     private const val DISPLAY_NAME_FIELD = 2
@@ -114,8 +117,12 @@ private object AppGridOrderProto {
         runCatching {
             if (!file.isFile) return emptyList()
             val bytes = file.readBytes()
+            if (bytes.isEmpty()) return emptyList()
             val (messageSize, payloadStart) = bytes.readVarint(0)
-            val payloadEnd = (payloadStart + messageSize.toInt()).coerceAtMost(bytes.size)
+            require(messageSize >= 0 && messageSize <= bytes.size - payloadStart) {
+                "Truncated order.data payload"
+            }
+            val payloadEnd = payloadStart + messageSize.toInt()
             var position = payloadStart
             buildList<ParsedOrder> {
                 while (position < payloadEnd) {
@@ -123,7 +130,10 @@ private object AppGridOrderProto {
                     position = next
                     if (tag.fieldNumber == OUTER_ITEM_FIELD && tag.wireType == LENGTH_DELIMITED) {
                         val (itemSize, itemStart) = bytes.readVarint(position)
-                        val itemEnd = (itemStart + itemSize.toInt()).coerceAtMost(payloadEnd)
+                        require(itemSize >= 0 && itemSize <= payloadEnd - itemStart) {
+                            "Truncated order.data item"
+                        }
+                        val itemEnd = itemStart + itemSize.toInt()
                         bytes.parseItem(itemStart, itemEnd, userId)?.let(::add)
                         position = itemEnd
                     } else {
@@ -150,9 +160,24 @@ private object AppGridOrderProto {
         encoded.addAll(payload)
         val temporaryFile = File(file.parentFile, "${file.name}.new")
         temporaryFile.outputStream().use { output -> output.write(encoded.toByteArray()) }
-        if (!temporaryFile.renameTo(file)) {
+        try {
+            try {
+                Files.move(
+                    temporaryFile.toPath(),
+                    file.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(
+                    temporaryFile.toPath(),
+                    file.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            }
+        } catch (throwable: Throwable) {
             temporaryFile.delete()
-            error("Unable to atomically write ${file.name}")
+            throw IllegalStateException("Unable to atomically write ${file.name}", throwable)
         }
     }
 
@@ -186,14 +211,16 @@ private object AppGridOrderProto {
             when {
                 tag.fieldNumber == PACKAGE_FIELD && tag.wireType == LENGTH_DELIMITED -> {
                     val (length, valueStart) = readVarint(position)
-                    val valueEnd = (valueStart + length.toInt()).coerceAtMost(end)
+                    require(length >= 0 && length <= end - valueStart) { "Truncated order.data string" }
+                    val valueEnd = valueStart + length.toInt()
                     packageName = copyOfRange(valueStart, valueEnd).decodeToString()
                     position = valueEnd
                 }
 
                 tag.fieldNumber == CLASS_FIELD && tag.wireType == LENGTH_DELIMITED -> {
                     val (length, valueStart) = readVarint(position)
-                    val valueEnd = (valueStart + length.toInt()).coerceAtMost(end)
+                    require(length >= 0 && length <= end - valueStart) { "Truncated order.data class" }
+                    val valueEnd = valueStart + length.toInt()
                     className = copyOfRange(valueStart, valueEnd).decodeToString()
                     position = valueEnd
                 }
@@ -247,11 +274,18 @@ private object AppGridOrderProto {
             VARINT -> readVarint(initialPosition).second
             LENGTH_DELIMITED -> {
                 val (length, contentStart) = readVarint(initialPosition)
-                (contentStart + length.toInt()).coerceAtMost(limit)
+                require(length >= 0 && length <= limit - contentStart) { "Truncated order.data field" }
+                contentStart + length.toInt()
             }
 
-            FIXED_64_BIT_WIDTH -> (initialPosition + Long.SIZE_BYTES).coerceAtMost(limit)
-            FIXED_32_BIT_WIDTH -> (initialPosition + Int.SIZE_BYTES).coerceAtMost(limit)
+            FIXED_64_BIT_WIDTH -> {
+                require(initialPosition + Long.SIZE_BYTES <= limit) { "Truncated order.data fixed64" }
+                initialPosition + Long.SIZE_BYTES
+            }
+            FIXED_32_BIT_WIDTH -> {
+                require(initialPosition + Int.SIZE_BYTES <= limit) { "Truncated order.data fixed32" }
+                initialPosition + Int.SIZE_BYTES
+            }
             else -> error("Unsupported protobuf wire type=$wireType")
         }
 

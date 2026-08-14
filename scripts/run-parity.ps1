@@ -7,11 +7,13 @@ param(
     [string]$SnapshotName = "car_launcher_parity_ready",
     [string]$ArtifactsRoot,
     [string]$FixtureApk,
+    [string]$InstrumentationApk,
     [string[]]$IgnoreRect = @("0,0,1920,76"),
     [ValidateSet("home", "app-grid", "recents", "calm-mode", "widget-host", "map-tos")]
     [string[]]$Scenarios = @("home", "app-grid", "recents", "calm-mode", "widget-host", "map-tos"),
     [switch]$CreateSnapshot,
-    [switch]$InstallFixtures
+    [switch]$InstallFixtures,
+    [switch]$SkipInstrumentation
 )
 
 Set-StrictMode -Version Latest
@@ -23,6 +25,9 @@ if ([string]::IsNullOrWhiteSpace($BaselineApk)) {
 }
 if ([string]::IsNullOrWhiteSpace($ArtifactsRoot)) {
     $ArtifactsRoot = Join-Path $repoRoot "artifacts\parity"
+}
+if ([string]::IsNullOrWhiteSpace($InstrumentationApk) -and -not $SkipInstrumentation) {
+    $InstrumentationApk = Join-Path $repoRoot "app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk"
 }
 
 function Invoke-AdbText([string[]]$Arguments) {
@@ -120,6 +125,11 @@ function Capture-Scenario([string]$Label, [string]$ApkPath, [string]$Scenario, [
         ArtifactsRoot = $ArtifactsRoot
         Scenario = $Scenario
         LaunchScenario = $true
+        RequireFixtures = $true
+    }
+    if (-not $SkipInstrumentation) {
+        $captureParameters.InstrumentationApk = $InstrumentationApk
+        $captureParameters.RequireInstrumentation = $true
     }
     if ($InstallApk) {
         $captureParameters.Install = $true
