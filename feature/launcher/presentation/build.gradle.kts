@@ -11,7 +11,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:common"))
     implementation(project(":core:platform"))
     implementation(project(":core:ui"))
     implementation(project(":feature:home:domain"))

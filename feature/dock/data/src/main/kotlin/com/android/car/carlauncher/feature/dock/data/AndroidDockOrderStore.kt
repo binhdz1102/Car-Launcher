@@ -18,6 +18,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,10 +58,7 @@ class AndroidDockOrderStore
 
         override suspend fun writeStockAndCurrent(serializedOrder: ByteArray) {
             withContext(dispatchers.io) {
-                stockFile().apply {
-                    parentFile?.mkdirs()
-                    writeBytes(serializedOrder)
-                }
+                writeStockAtomically(serializedOrder)
                 context.dockPreferences.edit { preferences ->
                     preferences[ORDER_KEY] = Base64.getEncoder().encodeToString(serializedOrder)
                 }
@@ -73,6 +74,36 @@ class AndroidDockOrderStore
         private fun decodeText(encoded: String): List<LauncherComponent> =
             runCatching { DockProtoCodec.decode(Base64.getDecoder().decode(encoded)) }
                 .getOrDefault(emptyList())
+
+        /** Keep the stock file readable by the rollback APK even if the process dies mid-write. */
+        private fun writeStockAtomically(serializedOrder: ByteArray) {
+            val target = stockFile()
+            target.parentFile?.mkdirs()
+            val temporary = File(target.parentFile, "${target.name}.new")
+            try {
+                temporary.writeBytes(serializedOrder)
+                try {
+                    Files.move(
+                        temporary.toPath(),
+                        target.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING,
+                    )
+                } catch (_: AtomicMoveNotSupportedException) {
+                    Files.move(
+                        temporary.toPath(),
+                        target.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING,
+                    )
+                }
+            } catch (exception: IOException) {
+                temporary.delete()
+                throw IllegalStateException("Unable to atomically write ${target.name}", exception)
+            } catch (exception: SecurityException) {
+                temporary.delete()
+                throw IllegalStateException("Unable to write ${target.name}", exception)
+            }
+        }
 
         private fun stockFile(): File = context.filesDir.resolve(STOCK_FILE_NAME)
 

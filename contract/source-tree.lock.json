@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sourceOfTruth": "Launcher/",
+  "hash": "sha256(canonical sorted relative-path + file-sha256 lines)",
+  "excludedDirectories": [
+    "build",
+    ".gradle",
+    "apk"
+  ],
+  "modules": [
+    {
+      "path": "app",
+      "fileCount": 355,
+      "sha256": "36b673426cb797438c038896b93ad0fbf024b2a9dc82cac4172365e5e6b28e5b"
+    },
+    {
+      "path": "libs/appgrid/lib",
+      "fileCount": 256,
+      "sha256": "d3b67e8432e51abdedb89b9d80b312a9c11a6ad6e267f815ad91756723f56f74"
+    },
+    {
+      "path": "docklib",
+      "fileCount": 133,
+      "sha256": "2012e5dd1625554d57a31dbbc10a85fb17ecf933c0f33d70ba6f071e57be7807"
+    },
+    {
+      "path": "docklib-util",
+      "fileCount": 98,
+      "sha256": "98c3658fc393cf6d35f7708b92a19d31f3d5c7284aa08ceab9b479194958b23b"
+    },
+    {
+      "path": "libs/car-apps-common",
+      "fileCount": 1,
+      "sha256": "8d75363755975e66bce70b2a01d433da8910486e30c0489fbb7616c16c553887"
+    },
+    {
+      "path": "libs/car-launcher-common",
+      "fileCount": 105,
+      "sha256": "9135db8431b763fb7814121e23caa621da7752ab1c4e2c94ff3d680803e14d39"
+    },
+    {
+      "path": "libs/car-media-common",
+      "fileCount": 1,
+      "sha256": "04a51b900582424b7350fa113d4dd50fe5ddc6b9f8e6113fb9d33947f2a186cb"
+    },
+    {
+      "path": "libs/car-ui-lib",
+      "fileCount": 1,
+      "sha256": "25ba4877a94cc9647b01c2186d3c75f811adc2fb144202f14345eb59f1418865"
+    },
+    {
+      "path": "libs/aconfig-platform-compat",
+      "fileCount": 3,
+      "sha256": "1f5b69b60b8e8727743c4d37b78e0782538d96119ef969ee02fc0b04d9d38496"
+    },
+    {
+      "path": "libs/hidden-apis-compat",
+      "fileCount": 5,
+      "sha256": "e97a3364a199eceb27da6c151042065b9a6f78805ad715e02d82d667ee6138ee"
+    }
+  ]
+}

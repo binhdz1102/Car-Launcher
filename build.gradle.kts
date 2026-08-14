@@ -22,8 +22,16 @@ tasks.register<Exec>("verifyApiCompat") {
     commandLine("python", "scripts/verify-api-compat.py", "--root", rootProject.projectDir.absolutePath)
 }
 
+tasks.register<Exec>("verifyArchitecture") {
+    description = "Checks Clean Architecture module boundaries."
+    group = "verification"
+    workingDir(rootProject.projectDir)
+    commandLine("python", "scripts/verify-architecture.py", "--root", rootProject.projectDir.absolutePath)
+}
+
 subprojects {
     tasks.matching { it.name == "check" }.configureEach {
         dependsOn(rootProject.tasks.named("verifyApiCompat"))
+        dependsOn(rootProject.tasks.named("verifyArchitecture"))
     }
 }

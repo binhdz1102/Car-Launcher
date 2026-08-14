@@ -9,7 +9,6 @@ android {
 
 dependencies {
     implementation(project(":core:ui"))
-    implementation(project(":feature:calmmode:data"))
     implementation(project(":feature:calmmode:domain"))
     implementation(project(":feature:media:domain"))
     implementation(libs.androidx.lifecycle.runtime.ktx)

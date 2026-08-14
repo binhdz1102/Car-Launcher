@@ -13,9 +13,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:common"))
     implementation(project(":core:platform"))
-    implementation(project(":feature:home:data"))
     implementation(project(":feature:home:domain"))
     implementation(project(":feature:launcher:domain"))
     implementation(libs.androidx.core.ktx)
