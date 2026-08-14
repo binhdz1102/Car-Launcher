@@ -236,11 +236,18 @@ class AndroidMediaRepository
             }
             val next =
                 runCatching {
-                    sessionManager
-                        .getActiveSessions(null)
-                        .sortedByDescending { active ->
-                            if (active.playbackState?.state == PlaybackState.STATE_PLAYING) 1 else 0
-                        }.firstOrNull()
+                    val sessions = sessionManager.getActiveSessions(null)
+                    val best =
+                        sessions.maxByOrNull { active ->
+                            MediaControllerSelection.score(
+                                state = active.playbackState?.state,
+                                hasMetadata = hasRenderableMetadata(active.metadata),
+                                hasQueue = !active.queue.isNullOrEmpty(),
+                            )
+                        }
+                    best?.takeIf { active ->
+                        MediaControllerSelection.isEligible(active.playbackState?.state)
+                    }
                 }.getOrNull()
             if (next?.sessionToken == controller?.sessionToken) {
                 refreshPlayback()
@@ -412,6 +419,13 @@ class AndroidMediaRepository
                     ?.takeIf { it.packageName == packageName }
                     ?.flattenToString()
             }.getOrNull()
+
+        private fun hasRenderableMetadata(metadata: MediaMetadata?): Boolean =
+            metadata != null &&
+                (
+                    !metadata.getString(MediaMetadata.METADATA_KEY_TITLE).isNullOrBlank() ||
+                        !metadata.getString(MediaMetadata.METADATA_KEY_ARTIST).isNullOrBlank()
+                )
 
         private sealed interface ControllerEvent {
             data object Refresh : ControllerEvent

@@ -22,6 +22,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.core.platform.PackageChange
@@ -88,6 +89,7 @@ class AndroidHomeTaskViewHost(
     private val carConnection: CarServiceConnection,
     private val packageChangeMonitor: PackageChangeMonitor,
     private val dispatchers: CoroutineDispatchers,
+    @param:ApplicationScope private val applicationScope: CoroutineScope,
 ) : HomeTaskViewHost {
     override val view = FrameLayout(activity).apply { setBackgroundColor(Color.BLACK) }
     override var embeddedTaskId: Int? = null
@@ -103,7 +105,15 @@ class AndroidHomeTaskViewHost(
         )
     private val executor: Executor = windowContext.mainExecutor
     private val hostLifecycle = CarTaskViewControllerHostLifecycle()
-    private val scope = CoroutineScope(SupervisorJob() + dispatchers.main)
+
+    // The application scope owns the process lifetime; this child is cancelled with the host
+    // view and therefore cannot leak a TaskView callback after the fragment is destroyed.
+    private val scope =
+        CoroutineScope(
+            applicationScope.coroutineContext +
+                dispatchers.main +
+                SupervisorJob(applicationScope.coroutineContext[Job]),
+        )
     private val lifecycleOwner = activity as? LifecycleOwner
     private val currentUserId = Process.myUid() / PER_USER_RANGE
     private val taskViewRestartPackages: Set<String> by lazy {
@@ -115,10 +125,14 @@ class AndroidHomeTaskViewHost(
     private var requestedTarget: HomeEmbeddedTaskTarget? = null
     private var controllerRequestInFlight = false
     private var awaitingReplacement = false
+
+    @Volatile
     private var released = false
     private var controllerRetryAttempt = 0
     private var controllerTimeoutJob: Job? = null
     private var controllerRetryJob: Job? = null
+
+    @Volatile
     private var taskTimeoutJob: Job? = null
     private var taskRecreateJob: Job? = null
     private var restoreJob: Job? = null
@@ -207,26 +221,30 @@ class AndroidHomeTaskViewHost(
     private val controllerCallback =
         object : CarTaskViewControllerCallback {
             override fun onConnected(connectedController: CarTaskViewController) {
-                if (released) {
-                    connectedController.release()
-                    return
+                dispatchToMain {
+                    if (released) {
+                        connectedController.release()
+                        return@dispatchToMain
+                    }
+                    controller = connectedController
+                    controllerRequestInFlight = false
+                    controllerRetryAttempt = 0
+                    controllerTimeoutJob?.cancel()
+                    controllerRetryJob?.cancel()
+                    Timber.tag(TAG).i("CarTaskViewController connected")
+                    createTaskViewIfPossible()
                 }
-                controller = connectedController
-                controllerRequestInFlight = false
-                controllerRetryAttempt = 0
-                controllerTimeoutJob?.cancel()
-                controllerRetryJob?.cancel()
-                Timber.tag(TAG).i("CarTaskViewController connected")
-                createTaskViewIfPossible()
             }
 
             override fun onDisconnected(disconnectedController: CarTaskViewController) {
-                if (controller === disconnectedController) controller = null
-                controllerRequestInFlight = false
-                releaseTaskView()
-                if (!released) {
-                    mutableEvents.tryEmit(HomeTaskViewEvent.Recovering)
-                    scheduleControllerRetry()
+                dispatchToMain {
+                    if (controller === disconnectedController) controller = null
+                    controllerRequestInFlight = false
+                    releaseTaskView()
+                    if (!released) {
+                        mutableEvents.tryEmit(HomeTaskViewEvent.Recovering)
+                        scheduleControllerRetry()
+                    }
                 }
             }
         }
@@ -335,80 +353,108 @@ class AndroidHomeTaskViewHost(
     private val taskCallback =
         object : ControlledRemoteCarTaskViewCallback {
             override fun onTaskViewCreated(created: ControlledRemoteCarTaskView) {
-                if (released) {
-                    created.release()
-                    return
+                dispatchToMain {
+                    if (released) {
+                        created.release()
+                        return@dispatchToMain
+                    }
+                    taskView = created
+                    view.addView(
+                        created,
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                        ),
+                    )
+                    view.doOnLayout { created.updateWindowBounds() }
+                    requestedTarget?.let(::armTaskTimeout)
+                    Timber.tag(TAG).i("ControlledRemoteCarTaskView created")
                 }
-                taskView = created
-                view.addView(
-                    created,
-                    FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                    ),
-                )
-                view.doOnLayout { created.updateWindowBounds() }
-                requestedTarget?.let(::armTaskTimeout)
-                Timber.tag(TAG).i("ControlledRemoteCarTaskView created")
             }
 
             override fun onTaskAppeared(taskInfo: ActivityManager.RunningTaskInfo) {
-                taskTimeoutJob?.cancel()
-                awaitingReplacement = false
-                embeddedTaskId = taskInfo.taskId
-                taskView?.updateWindowBounds()
-                taskComponent(taskInfo)?.let { component ->
-                    mutableEvents.tryEmit(
-                        HomeTaskViewEvent.TaskAppeared(taskInfo.taskId, component),
+                // The platform callback enters through a binder thread. Cancel the watchdog
+                // before dispatching UI work so a slow main looper cannot report a false timeout
+                // after SystemUI has already delivered the task.
+                cancelTaskTimeout()
+                dispatchToMain {
+                    if (released) return@dispatchToMain
+                    cancelTaskTimeout()
+                    awaitingReplacement = false
+                    embeddedTaskId = taskInfo.taskId
+                    taskView?.updateWindowBounds()
+                    taskComponent(taskInfo)?.let { component ->
+                        mutableEvents.tryEmit(
+                            HomeTaskViewEvent.TaskAppeared(taskInfo.taskId, component),
+                        )
+                    } ?: reportError(
+                        "Unknown embedded activity",
+                        "The vehicle returned no embedded component.",
                     )
-                } ?: reportError(
-                    "Unknown embedded activity",
-                    "The vehicle returned no embedded component.",
-                )
+                }
             }
 
             override fun onTaskInfoChanged(taskInfo: ActivityManager.RunningTaskInfo) {
-                taskView?.updateWindowBounds()
-                embeddedTaskId = taskInfo.taskId
-                taskComponent(taskInfo)?.let { component ->
-                    mutableEvents.tryEmit(
-                        HomeTaskViewEvent.TaskInfoChanged(taskInfo.taskId, component),
-                    )
+                cancelTaskTimeout()
+                dispatchToMain {
+                    if (released) return@dispatchToMain
+                    taskView?.updateWindowBounds()
+                    embeddedTaskId = taskInfo.taskId
+                    taskComponent(taskInfo)?.let { component ->
+                        mutableEvents.tryEmit(
+                            HomeTaskViewEvent.TaskInfoChanged(taskInfo.taskId, component),
+                        )
+                    }
                 }
             }
 
             override fun onTaskViewInitialized() {
-                Timber.tag(TAG).i("ControlledRemoteCarTaskView initialized")
+                dispatchToMain {
+                    Timber.tag(TAG).i("ControlledRemoteCarTaskView initialized")
+                }
             }
 
             override fun onTaskVanished(taskInfo: ActivityManager.RunningTaskInfo) {
-                if (embeddedTaskId == taskInfo.taskId) embeddedTaskId = null
-                if (awaitingReplacement || released) return
-                val target = requestedTarget ?: return
-                if (target.type == HomeEmbeddedTargetType.NAVIGATION) {
-                    runCatching { taskView?.startActivity() }
-                        .onFailure {
-                            reportError("Navigation closed", "Unable to restart navigation.")
-                            scheduleTaskViewRecreate()
-                        }
-                } else {
-                    reportError("Embedded app closed", "${target.label} left the embedded task.")
+                dispatchToMain {
+                    if (embeddedTaskId == taskInfo.taskId) embeddedTaskId = null
+                    if (awaitingReplacement || released) return@dispatchToMain
+                    val target = requestedTarget ?: return@dispatchToMain
+                    if (target.type == HomeEmbeddedTargetType.NAVIGATION) {
+                        runCatching { taskView?.startActivity() }
+                            .onFailure {
+                                reportError("Navigation closed", "Unable to restart navigation.")
+                                scheduleTaskViewRecreate()
+                            }
+                    } else {
+                        reportError("Embedded app closed", "${target.label} left the embedded task.")
+                    }
                 }
             }
 
             override fun onTaskViewReleased() {
-                releaseTaskView(releaseRemote = false)
-                if (!released) scheduleTaskViewRecreate()
-                Timber.tag(TAG).d("ControlledRemoteCarTaskView released by car service")
+                dispatchToMain {
+                    releaseTaskView(releaseRemote = false)
+                    if (!released) scheduleTaskViewRecreate()
+                    Timber.tag(TAG).d("ControlledRemoteCarTaskView released by car service")
+                }
             }
         }
+
+    /** CarSystemUI may invoke TaskView callbacks from its binder thread; all view calls stay main. */
+    private fun dispatchToMain(block: () -> Unit) {
+        // Do not bind callback delivery to the host scope: a callback can race release and may
+        // carry a remote controller/task view that must be released on the main thread. The
+        // callback adapter owns this executor hop; lifecycle-bound Flow collectors still use the
+        // structured child scope above.
+        activity.mainExecutor.execute(block)
+    }
 
     private fun taskComponent(taskInfo: ActivityManager.RunningTaskInfo): String? =
         taskInfo.baseIntent.component?.flattenToString()
             ?: taskInfo.topActivity?.flattenToString()
 
     private fun armTaskTimeout(target: HomeEmbeddedTaskTarget) {
-        taskTimeoutJob?.cancel()
+        cancelTaskTimeout()
         taskTimeoutJob =
             scope.launch {
                 delay(TASK_APPEAR_TIMEOUT_MS)
@@ -459,13 +505,18 @@ class AndroidHomeTaskViewHost(
     }
 
     private fun releaseTaskView(releaseRemote: Boolean = true) {
-        taskTimeoutJob?.cancel()
+        cancelTaskTimeout()
         embeddedTaskId = null
         taskView?.let { remoteTaskView ->
             view.removeView(remoteTaskView)
             if (releaseRemote) remoteTaskView.release()
         }
         taskView = null
+    }
+
+    private fun cancelTaskTimeout() {
+        taskTimeoutJob?.cancel()
+        taskTimeoutJob = null
     }
 
     private fun reportError(

@@ -10,6 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.core.platform.PackageChangeMonitor
@@ -28,6 +29,7 @@ import com.android.car.carlauncher.feature.media.domain.CallCardState
 import com.android.car.carlauncher.feature.media.domain.CallDurationFormatter
 import com.android.car.carlauncher.feature.media.presentation.MediaArtworkDecoder
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -40,6 +42,10 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
     @Inject lateinit var packageChangeMonitor: PackageChangeMonitor
 
     @Inject lateinit var coroutineDispatchers: CoroutineDispatchers
+
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
     private val viewModel: LauncherViewModel by viewModels()
     private var taskHost: HomeTaskViewHost? = null
@@ -58,6 +64,7 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
                 carConnection = carConnection,
                 packageChangeMonitor = packageChangeMonitor,
                 dispatchers = coroutineDispatchers,
+                applicationScope = applicationScope,
             )
         taskHost = host
         view.findViewById<android.widget.FrameLayout>(R.id.task_view_container).addView(host.view)
