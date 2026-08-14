@@ -11,3 +11,10 @@ android {
         viewBinding = false
     }
 }
+
+dependencies {
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.recyclerview)
+}

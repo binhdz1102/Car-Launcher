@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "sourceTree": "Launcher",
+  "libraries": [
+    {
+      "name": "appgrid",
+      "candidateFiles": [
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/AppGridConstants.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/AppGridFragment.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/AppGridRecyclerView.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/Banner.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/PageIndicator.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/pagination/PageIndexingHelper.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/pagination/PageMeasurementHelper.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/pagination/PaginationController.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/recyclerview/AppGridAdapter.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/recyclerview/AppGridLayoutManager.kt",
+        "libraries/appgrid/src/main/kotlin/com/android/car/carlauncher/recyclerview/PageMarginDecoration.kt"
+      ],
+      "symbols": [
+        "interface AppGridConstants",
+        "annotation class PageOrientation",
+        "annotation class AppItemBoundDirection",
+        "fun isHorizontal",
+        "class AppGridFragment",
+        "enum class Mode",
+        "fun newInstance",
+        "class AppGridRecyclerView",
+        "fun forceAttachAdapter",
+        "class PageIndexingHelper",
+        "fun gridPositionToAdaptorIndex",
+        "fun adaptorIndexToGridPosition",
+        "class PaginationController",
+        "class AppGridAdapter"
+      ],
+      "sourceFiles": 41,
+      "portedFiles": 11,
+      "status": "partial-port"
+    },
+    {
+      "name": "dock",
+      "candidateFiles": [
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/DockInterface.kt",
+        "libraries/dock/src/main/kotlin/com/android/car/docklib/data/DockItemId.kt"
+      ],
+      "symbols": [
+        "interface DockInterface",
+        "annotation class DockItemId",
+        "fun appPinned",
+        "fun appUnpinned",
+        "fun appLaunched",
+        "fun launchApp",
+        "fun getIconColorWithScrim",
+        "fun getMediaServiceComponents"
+      ],
+      "sourceFiles": 22,
+      "portedFiles": 2,
+      "status": "partial-port"
+    },
+    {
+      "name": "dock-util",
+      "candidateFiles": [
+        "libraries/dock-util/src/main/kotlin/com/android/car/dockutil/events/DockEvent.kt",
+        "libraries/dock-util/src/main/kotlin/com/android/car/dockutil/events/DockPermission.kt",
+        "libraries/dock-util/src/main/kotlin/com/android/car/dockutil/events/DockEventSenderHelper.kt",
+        "libraries/dock-util/src/main/kotlin/com/android/car/dockutil/events/DockCompatUtils.kt"
+      ],
+      "symbols": [
+        "enum class DockEvent",
+        "enum class DockPermission",
+        "class DockEventSenderHelper",
+        "object DockCompatUtils",
+        "fun sendLaunchEvent",
+        "fun sendPinEvent",
+        "fun sendUnpinEvent",
+        "fun isDockSupportedOnDisplay"
+      ],
+      "sourceFiles": 8,
+      "portedFiles": 4,
+      "status": "partial-port"
+    },
+    {
+      "name": "launcher-common",
+      "candidateFiles": [
+        "libraries/launcher-common/src/main/kotlin/com/android/car/carlaunchercommon/LauncherCommonContract.kt"
+      ],
+      "symbols": [
+        "object LauncherCommonContract",
+        "STOCK_APP_ORDER_FILE",
+        "DOCK_PROTO_FILE"
+      ],
+      "sourceFiles": 12,
+      "portedFiles": 1,
+      "status": "partial-port"
+    }
+  ]
+}

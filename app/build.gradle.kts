@@ -98,6 +98,7 @@ dependencies {
     // The AOSP application links CarAppGrid-lib as a static library; retain its resource and
     // public contract in the standalone application as well.
     implementation(project(":libraries:appgrid"))
+    implementation(project(":libraries:launcher-common"))
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)

@@ -14,3 +14,16 @@ plugins {
 }
 
 apply(from = "gradle/platform-artifacts.gradle.kts")
+
+tasks.register<Exec>("verifyApiCompat") {
+    description = "Checks the tracked public AppGrid, Dock and common API seam."
+    group = "verification"
+    workingDir(rootProject.projectDir)
+    commandLine("python", "scripts/verify-api-compat.py", "--root", rootProject.projectDir.absolutePath)
+}
+
+subprojects {
+    tasks.matching { it.name == "check" }.configureEach {
+        dependsOn(rootProject.tasks.named("verifyApiCompat"))
+    }
+}

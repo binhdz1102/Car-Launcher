@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="broadcast_sender_permission_label">Dock broadcast sender</string>
+    <string name="broadcast_sender_permission_desc">Permission required for package to broadcast events to the Dock.</string>
+    <string name="broadcast_receiver_permission_label">Dock broadcast receiver</string>
+    <string name="broadcast_receiver_permission_desc">Permission required for package listen to broadcast events for the Dock.</string>
+    <string name="pin_failed_no_spots">No spot available to pin</string>
+</resources>

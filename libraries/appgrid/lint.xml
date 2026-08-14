@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    The AppGrid library is built standalone for API compatibility. AAOS supplies FocusArea at
+    runtime, and the stock grid column/row values intentionally exist only for w930dp. Keep these
+    exact AOSP declarations while rejecting new missing classes/resources elsewhere.
+-->
+<lint>
+    <issue id="MissingClass">
+        <ignore path="src/main/res/layout/app_grid_fragment.xml" />
+    </issue>
+    <issue id="MissingDefaultResource">
+        <ignore path="src/main/res/values-w930dp/integers.xml" />
+    </issue>
+</lint>
