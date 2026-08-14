@@ -5,10 +5,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.android.car.carlauncher.core.model.LauncherComponent
+import com.android.car.carlauncher.core.platform.ApplicationScope
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,8 +29,9 @@ class AndroidDockOrderStore
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        @param:ApplicationScope private val scope: CoroutineScope,
+        private val dispatchers: CoroutineDispatchers,
     ) : DockOrderStore {
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private val mutableOrder = MutableStateFlow(readStockOrder())
 
         init {
@@ -52,7 +53,7 @@ class AndroidDockOrderStore
         }
 
         override suspend fun writeStockAndCurrent(serializedOrder: ByteArray) {
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 stockFile().apply {
                     parentFile?.mkdirs()
                     writeBytes(serializedOrder)

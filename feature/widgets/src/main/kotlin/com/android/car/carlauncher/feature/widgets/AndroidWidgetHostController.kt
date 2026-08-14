@@ -3,8 +3,8 @@ package com.android.car.carlauncher.feature.widgets
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import com.android.car.carlauncher.core.model.DisplayTarget
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +19,7 @@ class AndroidWidgetHostController
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        private val dispatchers: CoroutineDispatchers,
     ) : WidgetHostController {
         private val mutableState =
             MutableStateFlow(
@@ -32,7 +33,7 @@ class AndroidWidgetHostController
         override val state: StateFlow<WidgetHostState> = mutableState.asStateFlow()
 
         override suspend fun bind(display: DisplayTarget): Result<WidgetHostState> =
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 runCatching {
                     val manager = AppWidgetManager.getInstance(context)
                     val providers =

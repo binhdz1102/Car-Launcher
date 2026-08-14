@@ -7,6 +7,7 @@ import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTargetType
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskTarget
 import com.android.car.carlauncher.feature.home.domain.NavigationTargetInvalidation
@@ -34,6 +35,7 @@ class AndroidNavigationTargetResolver
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        private val featureFlags: LauncherFeatureFlags,
     ) : NavigationTargetResolver,
         NavigationTargetInvalidation {
         private val packageManager = context.packageManager
@@ -121,10 +123,12 @@ class AndroidNavigationTargetResolver
 
         private fun maybeReplaceWithTosIntent(mapIntent: Intent): Intent {
             val mapPackage = mapIntent.component?.packageName
-            if (!isTosAccepted() && (mapPackage == null || mapPackage in tosDisabledPackages())) {
-                tosMapIntent()?.let { return it }
+            return when {
+                !featureFlags.tosRestrictionsEnabled -> mapIntent
+                !isTosAccepted() && (mapPackage == null || mapPackage in tosDisabledPackages()) ->
+                    tosMapIntent() ?: mapIntent
+                else -> mapIntent
             }
-            return mapIntent
         }
 
         private fun tosMapIntent(): Intent? =

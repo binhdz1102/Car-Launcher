@@ -10,6 +10,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.core.platform.PackageChangeMonitor
 import com.android.car.carlauncher.core.ui.CarUi
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskState
@@ -32,6 +33,8 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
 
     @Inject lateinit var packageChangeMonitor: PackageChangeMonitor
 
+    @Inject lateinit var coroutineDispatchers: CoroutineDispatchers
+
     private val viewModel: LauncherViewModel by viewModels()
     private var taskHost: HomeTaskViewHost? = null
     private var loadedComponent: String? = null
@@ -48,6 +51,7 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
                 activity = requireActivity(),
                 carConnection = carConnection,
                 packageChangeMonitor = packageChangeMonitor,
+                dispatchers = coroutineDispatchers,
             )
         taskHost = host
         view.findViewById<android.widget.FrameLayout>(R.id.task_view_container).addView(host.view)

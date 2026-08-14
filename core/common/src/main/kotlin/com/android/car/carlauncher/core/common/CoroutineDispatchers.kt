@@ -1,11 +1,8 @@
 package com.android.car.carlauncher.core.common
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-
-/** Dispatchers are injectable at module boundaries so repository work stays testable. */
-data class CoroutineDispatchers(
-    val main: CoroutineDispatcher = Dispatchers.Main.immediate,
-    val io: CoroutineDispatcher = Dispatchers.IO,
-    val default: CoroutineDispatcher = Dispatchers.Default,
-)
+/**
+ * Source-compatible alias for clients that still import the pre-boundary dispatcher type.
+ * Construction and Hilt binding are centralized in core:platform.
+ */
+@Deprecated("Use core.platform.CoroutineDispatchers")
+typealias CoroutineDispatchers = com.android.car.carlauncher.core.platform.CoroutineDispatchers

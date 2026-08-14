@@ -6,14 +6,13 @@ import android.car.CarProjectionManager
 import android.car.projection.ProjectionStatus
 import android.content.Context
 import android.content.Intent
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.feature.media.domain.ProjectionCard
 import com.android.car.carlauncher.feature.media.domain.ProjectionRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,8 +35,8 @@ class AndroidProjectionRepository
     constructor(
         @param:ApplicationContext private val context: Context,
         private val carConnection: CarServiceConnection,
+        @param:ApplicationScope private val repositoryScope: CoroutineScope,
     ) : ProjectionRepository {
-        private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private val mutableProjection = MutableStateFlow<ProjectionCard?>(null)
 
         override val projection: StateFlow<ProjectionCard?> = mutableProjection.asStateFlow()

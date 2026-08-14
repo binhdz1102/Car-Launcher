@@ -6,6 +6,7 @@ import android.car.VehiclePropertyIds
 import android.car.VehicleUnit
 import android.car.hardware.CarPropertyValue
 import android.car.hardware.property.CarPropertyManager
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.feature.calmmode.domain.CalmTemperature
 import com.android.car.carlauncher.feature.calmmode.domain.TemperatureRepository
@@ -15,8 +16,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,9 +34,8 @@ class AndroidTemperatureRepository
     @Inject
     constructor(
         private val carConnection: CarServiceConnection,
+        @param:ApplicationScope private val scope: CoroutineScope,
     ) : TemperatureRepository {
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
         override val temperature: StateFlow<CalmTemperature?> =
             carConnection.car
                 .flatMapLatest { car -> car?.let(::observe) ?: flowOf(null) }

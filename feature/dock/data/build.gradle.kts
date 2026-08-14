@@ -10,6 +10,7 @@ android {
 dependencies {
     implementation(project(":feature:dock:domain"))
     implementation(project(":core:model"))
+    implementation(project(":core:platform"))
     implementation(project(":libraries:dock"))
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coroutines.android)

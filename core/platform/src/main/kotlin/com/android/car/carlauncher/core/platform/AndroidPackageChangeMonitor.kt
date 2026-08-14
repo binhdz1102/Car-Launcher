@@ -11,8 +11,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,9 +27,9 @@ class AndroidPackageChangeMonitor
     @Inject
     constructor(
         @ApplicationContext context: Context,
+        @param:ApplicationScope private val scope: CoroutineScope,
     ) : PackageChangeMonitor {
         private val launcherApps = context.getSystemService(LauncherApps::class.java)
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
         override val packageChanges: Flow<PackageChange> =
             callbackFlow {

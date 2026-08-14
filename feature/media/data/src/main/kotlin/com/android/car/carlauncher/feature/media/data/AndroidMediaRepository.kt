@@ -11,17 +11,17 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.SystemClock
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
 import com.android.car.carlauncher.feature.media.domain.MediaPlayback
 import com.android.car.carlauncher.feature.media.domain.MediaQueueItem
 import com.android.car.carlauncher.feature.media.domain.MediaRepository
 import com.android.car.carlauncher.feature.media.domain.MediaSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -55,9 +55,10 @@ class AndroidMediaRepository
         @param:ApplicationContext private val context: Context,
         private val carConnection: CarServiceConnection,
         private val artworkCache: MediaArtworkCache,
+        @param:ApplicationScope private val repositoryScope: CoroutineScope,
+        private val featureFlags: LauncherFeatureFlags,
     ) : MediaRepository {
         private val sessionManager = context.getSystemService(MediaSessionManager::class.java)
-        private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private val controllerEvents =
             MutableSharedFlow<ControllerEvent>(
                 extraBufferCapacity = 1,
@@ -214,6 +215,12 @@ class AndroidMediaRepository
             }
 
         private fun chooseActiveController() {
+            if (!featureFlags.mediaSessionCard) {
+                controller?.unregisterCallback(controllerCallback)
+                controller = null
+                refreshPlayback()
+                return
+            }
             val next =
                 runCatching {
                     sessionManager

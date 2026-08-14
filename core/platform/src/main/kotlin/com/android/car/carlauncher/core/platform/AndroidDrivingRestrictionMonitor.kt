@@ -9,9 +9,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,9 +28,8 @@ class AndroidDrivingRestrictionMonitor
     @Inject
     constructor(
         private val carServiceConnection: CarServiceConnection,
+        @param:ApplicationScope private val scope: CoroutineScope,
     ) : DrivingRestrictionMonitor {
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
         @OptIn(ExperimentalCoroutinesApi::class)
         override val restrictions: StateFlow<UxrState> =
             carServiceConnection.car

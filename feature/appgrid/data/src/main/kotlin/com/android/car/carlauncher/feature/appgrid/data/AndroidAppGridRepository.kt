@@ -22,8 +22,11 @@ import android.service.media.MediaBrowserService
 import com.android.car.carlauncher.core.model.DisplayTarget
 import com.android.car.carlauncher.core.model.DrivingRestriction
 import com.android.car.carlauncher.core.model.LauncherComponent
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.core.platform.DrivingRestrictionMonitor
+import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
 import com.android.car.carlauncher.core.platform.PackageChangeMonitor
 import com.android.car.carlauncher.core.platform.UxrState
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridAvailability
@@ -37,8 +40,6 @@ import com.android.car.carlauncher.feature.appgrid.domain.AppGridState
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridStateReducer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,12 +73,14 @@ class AndroidAppGridRepository
         private val packageChanges: PackageChangeMonitor,
         private val orderStore: AppGridOrderStore,
         private val mirroringSessions: MirroringSessionObserver,
+        @param:ApplicationScope private val scope: CoroutineScope,
+        private val dispatchers: CoroutineDispatchers,
+        private val featureFlags: LauncherFeatureFlags,
     ) : AppGridRepository {
         private val launcherApps = context.getSystemService(LauncherApps::class.java)
         private val packageManager = context.packageManager
         private val user = Process.myUserHandle()
         private val userId = Process.myUid() / PER_USER_RANGE
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         private val order = MutableStateFlow(emptyList<LauncherComponent>())
         private val mediaTemplateMethod: Method? by lazy {
             runCatching {
@@ -122,7 +125,7 @@ class AndroidAppGridRepository
             fromIndex: Int,
             toIndex: Int,
         ): Result<Unit> =
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 runCatching {
                     check(state.value.canReorder) { "App order cannot be changed while driving." }
                     val reordered = state.value.items.toMutableList()
@@ -137,7 +140,7 @@ class AndroidAppGridRepository
             }
 
         override suspend fun saveOrder(order: List<LauncherComponent>): Result<Unit> =
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 runCatching {
                     check(state.value.canReorder) { "App order cannot be changed while driving." }
                     val existing =
@@ -152,7 +155,7 @@ class AndroidAppGridRepository
             }
 
         override suspend fun clearOrder(): Result<Unit> =
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 runCatching {
                     orderStore.clear()
                     order.value = emptyList()
@@ -164,7 +167,7 @@ class AndroidAppGridRepository
             display: DisplayTarget,
             mode: AppGridMode,
         ): Result<Unit> =
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 runCatching {
                     when (item.availability) {
                         AppGridAvailability.AVAILABLE -> launchAvailable(item, display, mode)
@@ -180,7 +183,7 @@ class AndroidAppGridRepository
             }
 
         override suspend fun shortcuts(item: AppGridItem): Result<List<AppGridShortcut>> =
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 runCatching {
                     if (item.type != AppGridItemType.ACTIVITY || item.availability != AppGridAvailability.AVAILABLE) {
                         return@runCatching emptyList()
@@ -210,7 +213,7 @@ class AndroidAppGridRepository
             shortcut: AppGridShortcut,
             display: DisplayTarget,
         ): Result<Unit> =
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 runCatching {
                     launcherApps.startShortcut(
                         item.component.packageName,
@@ -223,7 +226,7 @@ class AndroidAppGridRepository
             }
 
         override suspend fun dismissTosBanner() {
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 legacyPreferences()
                     .edit()
                     .putLong(TOS_BANNER_DISMISS_TIME_KEY, Instant.now().epochSecond)
@@ -232,7 +235,7 @@ class AndroidAppGridRepository
         }
 
         override suspend fun reviewTos(display: DisplayTarget): Result<Unit> =
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 runCatching {
                     startTosActivity(display)
                 }
@@ -476,6 +479,9 @@ class AndroidAppGridRepository
         }
 
         private fun readTosState(): TosState {
+            if (!featureFlags.tosRestrictionsEnabled) {
+                return TosState(accepted = true, blocksApps = false)
+            }
             val value = Settings.Secure.getString(context.contentResolver, CarSettings.Secure.KEY_USER_TOS_ACCEPTED)
             return TosState(accepted = value == TOS_ACCEPTED, blocksApps = value == TOS_NOT_ACCEPTED)
         }

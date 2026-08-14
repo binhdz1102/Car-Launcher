@@ -6,11 +6,13 @@ import android.content.Intent
 import android.os.Process
 import android.os.UserHandle
 import com.android.car.carlauncher.core.model.LauncherComponent
+import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
 import com.android.car.carlauncher.feature.dock.domain.DockItem
 import com.android.car.carlauncher.feature.dock.domain.DockRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,26 +23,32 @@ class AndroidDockRepository
     constructor(
         @param:ApplicationContext private val context: Context,
         private val orderStore: DockOrderStore,
+        private val featureFlags: LauncherFeatureFlags,
     ) : DockRepository {
         private val mediaServices = lazy { discoverMediaServices() }
 
         override val items: Flow<List<DockItem>> =
-            orderStore.order
-                .map { components ->
-                    components.mapIndexed { index, component ->
-                        DockItem(
-                            component = component.copy(userId = currentUserId()),
-                            position = index,
-                            isMediaApp = component.flattened in mediaServices.value,
-                        )
+            if (!featureFlags.dockFeature) {
+                flowOf(emptyList())
+            } else {
+                orderStore.order
+                    .map { components ->
+                        components.mapIndexed { index, component ->
+                            DockItem(
+                                component = component.copy(userId = currentUserId()),
+                                position = index,
+                                isMediaApp = component.flattened in mediaServices.value,
+                            )
+                        }
                     }
-                }
+            }
 
         override suspend fun pin(
             component: LauncherComponent,
             position: Int,
         ): Result<Unit> =
             runCatching {
+                check(featureFlags.dockFeature) { "Dock feature is disabled" }
                 require(position >= 0) { "Dock position must be non-negative" }
                 val current = orderStore.order.first().toMutableList()
                 current.removeAll { it.flattened == component.flattened }
@@ -53,6 +61,7 @@ class AndroidDockRepository
 
         override suspend fun unpin(component: LauncherComponent): Result<Unit> =
             runCatching {
+                check(featureFlags.dockFeature) { "Dock feature is disabled" }
                 orderStore.writeOrder(
                     orderStore.order.first().filterNot { it.flattened == component.flattened },
                 )

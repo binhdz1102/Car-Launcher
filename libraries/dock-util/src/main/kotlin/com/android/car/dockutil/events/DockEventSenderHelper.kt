@@ -52,12 +52,13 @@ class DockEventSenderHelper(
         )
     }
 
-    private fun ActivityManager.RunningTaskInfo.componentName(): ComponentName? =
-        baseActivity ?: baseIntent.component
+    private fun ActivityManager.RunningTaskInfo.componentName() = baseActivity ?: baseIntent.component
 
     private fun ActivityManager.RunningTaskInfo.displayIdCompat(): Int =
         runCatching {
-            ActivityManager.RunningTaskInfo::class.java.getField("displayId").getInt(this)
+            ActivityManager.RunningTaskInfo::class.java
+                .getField("displayId")
+                .getInt(this)
         }.getOrDefault(0)
 
     companion object {
@@ -68,5 +69,5 @@ class DockEventSenderHelper(
 /** Temporary source-compatible seam for the generated AOSP dock flag. */
 object DockRuntimeFlags {
     @Volatile
-    var isEnabled: Boolean = true
+    var isEnabled: Boolean = false
 }

@@ -1,6 +1,7 @@
 package com.android.car.carlauncher.feature.calmmode.data
 
 import android.content.Context
+import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
 import com.android.car.carlauncher.feature.calmmode.domain.CalmModeRepository
 import com.android.car.carlauncher.feature.calmmode.domain.CalmModeState
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -15,11 +16,12 @@ class AndroidCalmModeRepository
     constructor(
         @param:ApplicationContext private val context: Context,
         private val preferenceStore: CalmModePreferenceStore,
+        private val featureFlags: LauncherFeatureFlags,
     ) : CalmModeRepository {
         override val state: Flow<CalmModeState> =
             preferenceStore.enabled.map { enabled ->
                 CalmModeState(
-                    enabled = enabled,
+                    enabled = featureFlags.calmMode && enabled,
                     title =
                         context.resources
                             .getIdentifier("calm_mode_title", "string", context.packageName)
@@ -31,6 +33,6 @@ class AndroidCalmModeRepository
 
         override suspend fun setEnabled(enabled: Boolean): Result<Unit> =
             runCatching {
-                preferenceStore.writeEnabled(enabled)
+                if (featureFlags.calmMode) preferenceStore.writeEnabled(enabled)
             }
     }

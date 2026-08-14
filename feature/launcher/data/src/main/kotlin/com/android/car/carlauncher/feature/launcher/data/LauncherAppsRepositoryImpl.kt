@@ -14,7 +14,9 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Process
 import android.service.media.MediaBrowserService
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.core.platform.DrivingRestrictionMonitor
 import com.android.car.carlauncher.core.platform.PackageChangeMonitor
 import com.android.car.carlauncher.core.platform.UxrState
@@ -27,8 +29,6 @@ import com.android.car.carlauncher.feature.launcher.domain.LauncherAppsRepositor
 import com.android.car.carlauncher.feature.launcher.domain.LauncherRestrictions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -102,12 +102,13 @@ class LauncherAppsRepositoryImpl
         private val drivingRestrictionMonitor: DrivingRestrictionMonitor,
         private val packageChangeMonitor: PackageChangeMonitor,
         private val navigationTargetResolver: NavigationTargetResolver,
+        @param:ApplicationScope private val repositoryScope: CoroutineScope,
+        private val dispatchers: CoroutineDispatchers,
     ) : LauncherAppsRepository {
         private val launcherApps = context.getSystemService(LauncherApps::class.java)
         private val packageManager = context.packageManager
         private val currentUser = Process.myUserHandle()
         private val currentUserId = Process.myUid() / PER_USER_RANGE
-        private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
         override val restrictions =
             drivingRestrictionMonitor.restrictions
@@ -126,12 +127,12 @@ class LauncherAppsRepositoryImpl
             ) { _, currentRestrictions, _ ->
                 loadApps(currentRestrictions).sortedBy { app -> app.label.lowercase() }
             }.conflate()
-                .flowOn(Dispatchers.Default)
+                .flowOn(dispatchers.default)
 
         override suspend fun navigationTarget(): Result<EmbeddedAppTarget> = navigationTargetResolver.resolve()
 
         override suspend fun launch(app: LaunchableApp): Result<Unit> =
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.default) {
                 runCatching {
                     val current =
                         loadApps(restrictions.value)

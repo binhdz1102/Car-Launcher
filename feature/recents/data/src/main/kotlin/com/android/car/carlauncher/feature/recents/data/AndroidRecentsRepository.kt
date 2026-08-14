@@ -8,7 +8,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Process
 import com.android.car.carlauncher.core.model.DisplayTarget
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.core.platform.DrivingRestrictionMonitor
 import com.android.car.carlauncher.core.platform.QuickStepRecentTasksSession
 import com.android.car.carlauncher.core.platform.UxrState
@@ -19,8 +21,6 @@ import com.android.car.carlauncher.feature.recents.domain.RecentsStateReducer
 import com.android.systemui.shared.system.ActivityManagerWrapper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -43,10 +43,11 @@ class AndroidRecentsRepository
         @param:ApplicationContext private val context: Context,
         private val carConnection: CarServiceConnection,
         private val drivingRestrictions: DrivingRestrictionMonitor,
+        @param:ApplicationScope private val scope: CoroutineScope,
+        private val dispatchers: CoroutineDispatchers,
     ) : RecentsRepository {
         private val activityManager = context.getSystemService(ActivityManager::class.java)
         private val activityManagerWrapper = ActivityManagerWrapper.getInstance()
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         private val display = MutableStateFlow(DEFAULT_DISPLAY)
         private val mutableState = MutableStateFlow(RecentsState())
 
@@ -79,7 +80,7 @@ class AndroidRecentsRepository
         }
 
         override suspend fun launch(task: RecentTask): Result<Unit> =
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 runCatching {
                     check(task.isEnabled) { "Task is unavailable while driving." }
                     check(activityManagerWrapper.startActivityFromRecents(task.taskId, null)) {
@@ -91,7 +92,7 @@ class AndroidRecentsRepository
             }
 
         override suspend fun launchTopRunningTask(display: DisplayTarget): Result<Unit> =
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 runCatching {
                     val recentsComponent = ComponentName(context, RECENTS_ACTIVITY_CLASS)
                     val candidate =
@@ -115,7 +116,7 @@ class AndroidRecentsRepository
             }
 
         override suspend fun dismiss(task: RecentTask): Result<Unit> =
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 runCatching {
                     activityManagerWrapper.removeTask(task.taskId)
                     mutableState.value = readState(display.value, drivingRestrictions.restrictions.value)
@@ -125,7 +126,7 @@ class AndroidRecentsRepository
             }
 
         override suspend fun clearAll(): Result<Unit> =
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 runCatching {
                     activityManagerWrapper.removeAllRecentTasks()
                     mutableState.value = RecentsState(tasks = emptyList(), display = display.value, isLoading = false)

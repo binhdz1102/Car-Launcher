@@ -16,6 +16,8 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.timber)
 
+    testImplementation(libs.junit)
+
     // These are supplied by the API 37 AAOS image and verified before every app build.
     compileOnly(files(platformArtifactsDirectory.resolve("android.car.jar")))
     compileOnly(files(platformArtifactsDirectory.resolve("systemui-shared.jar")))

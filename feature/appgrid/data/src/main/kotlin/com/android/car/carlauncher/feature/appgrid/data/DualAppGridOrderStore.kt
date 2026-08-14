@@ -5,8 +5,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.android.car.carlauncher.core.model.LauncherComponent
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -25,9 +25,10 @@ class DualAppGridOrderStore
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        private val dispatchers: CoroutineDispatchers,
     ) : AppGridOrderStore {
         override suspend fun read(): List<LauncherComponent> =
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 val dataStoreOrder =
                     context.appGridPreferences.data
                         .first()[orderedComponentsKey]
@@ -42,7 +43,7 @@ class DualAppGridOrderStore
             }
 
         override suspend fun write(order: List<LauncherComponent>) {
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 val canonicalOrder = order.distinctBy(LauncherComponent::flattened)
                 saveDataStore(canonicalOrder)
                 AppGridOrderProto.write(File(context.filesDir, STOCK_ORDER_FILE), canonicalOrder)
@@ -50,7 +51,7 @@ class DualAppGridOrderStore
         }
 
         override suspend fun clear() {
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 context.appGridPreferences.edit { preferences -> preferences.remove(orderedComponentsKey) }
                 File(context.filesDir, STOCK_ORDER_FILE).takeIf(File::exists)?.delete()
             }

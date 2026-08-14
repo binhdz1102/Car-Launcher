@@ -10,10 +10,9 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,9 +42,8 @@ class AndroidMirroringSessionObserver
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        @param:ApplicationScope private val scope: CoroutineScope,
     ) : MirroringSessionObserver {
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
         override val sessions: Flow<MirroringSession> =
             callbackFlow {
                 trySend(MirroringSession())

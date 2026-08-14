@@ -23,12 +23,12 @@ import android.widget.FrameLayout
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.android.car.carlauncher.core.platform.CarServiceConnection
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.core.platform.PackageChange
 import com.android.car.carlauncher.core.platform.PackageChangeMonitor
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTargetType
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskTarget
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -86,6 +86,7 @@ class AndroidHomeTaskViewHost(
     private val activity: Activity,
     private val carConnection: CarServiceConnection,
     private val packageChangeMonitor: PackageChangeMonitor,
+    private val dispatchers: CoroutineDispatchers,
 ) : HomeTaskViewHost {
     override val view = FrameLayout(activity).apply { setBackgroundColor(Color.BLACK) }
 
@@ -99,7 +100,7 @@ class AndroidHomeTaskViewHost(
         )
     private val executor: Executor = windowContext.mainExecutor
     private val hostLifecycle = CarTaskViewControllerHostLifecycle()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scope = CoroutineScope(SupervisorJob() + dispatchers.main)
     private val lifecycleOwner = activity as? LifecycleOwner
     private val currentUserId = Process.myUid() / PER_USER_RANGE
     private val taskViewRestartPackages: Set<String> by lazy {

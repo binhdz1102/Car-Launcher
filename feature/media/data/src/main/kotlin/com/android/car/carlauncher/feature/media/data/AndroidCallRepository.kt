@@ -7,13 +7,12 @@ import android.os.SystemClock
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.TelecomManager
+import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.feature.media.domain.CallCard
 import com.android.car.carlauncher.feature.media.domain.CallCardState
 import com.android.car.carlauncher.feature.media.domain.CallRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,8 +34,8 @@ class CallStateStore
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        @param:ApplicationScope private val scope: CoroutineScope,
     ) {
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private val events =
             MutableSharedFlow<CallEvent>(
                 extraBufferCapacity = EVENT_BUFFER_SIZE,
