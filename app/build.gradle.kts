@@ -22,6 +22,12 @@ val platformKeystoreProperties =
 android {
     namespace = "com.android.car.carlauncher"
 
+    // The composition root does not consume generated bindings. AOSP layout resources are
+    // packaged here for the public resource contract; feature modules own their ViewBinding.
+    buildFeatures {
+        viewBinding = false
+    }
+
     defaultConfig {
         applicationId = "com.android.car.carlauncher"
         // Higher than the Baklava image's versionCode (37), so adb install -r
@@ -89,6 +95,9 @@ dependencies {
     implementation(project(":feature:widgets"))
     implementation(project(":feature:dock:data"))
     implementation(project(":feature:dock:presentation"))
+    // The AOSP application links CarAppGrid-lib as a static library; retain its resource and
+    // public contract in the standalone application as well.
+    implementation(project(":libraries:appgrid"))
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)

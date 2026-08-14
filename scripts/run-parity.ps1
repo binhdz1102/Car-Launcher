@@ -197,6 +197,7 @@ $scenarios = $Scenarios
 $baselineArtifacts = [ordered]@{}
 $candidateArtifacts = [ordered]@{}
 $comparisonResults = @()
+$resourceContractArtifact = $null
 $completed = $false
 $failureMessage = $null
 $runStatus = "failed"
@@ -216,6 +217,7 @@ function Write-RunArtifact {
         baselineArtifacts = $baselineArtifacts
         candidateArtifacts = $candidateArtifacts
         comparisons = $comparisonResults
+        resourceContract = $resourceContractArtifact
         finalSmokeArtifact = if ($completed) { $finalSmoke } else { $null }
         passed = $completed
         error = $ErrorMessage
@@ -223,6 +225,21 @@ function Write-RunArtifact {
 }
 
 try {
+    $resourceContractPath = Join-Path $runDir "resource-contract.json"
+    & python (Join-Path $scriptRoot "verify-resource-contract.py") `
+        --root $repoRoot `
+        --reference-root (Join-Path $repoRoot "Launcher") `
+        --output $resourceContractPath | Out-Null
+    $resourceContractExitCode = $LASTEXITCODE
+    $resourceContractArtifact = if (Test-Path -LiteralPath $resourceContractPath) {
+        Get-Content -LiteralPath $resourceContractPath -Raw | ConvertFrom-Json
+    } else {
+        $null
+    }
+    if ($resourceContractExitCode -ne 0 -or $null -eq $resourceContractArtifact -or -not $resourceContractArtifact.passed) {
+        throw "INVALID: candidate overlayable resource contract does not match the locked AOSP tree."
+    }
+
     foreach ($scenario in $scenarios) {
         Restore-Snapshot
         $baselineArtifacts[$scenario] = Capture-Scenario "baseline" $BaselineApk $scenario $true

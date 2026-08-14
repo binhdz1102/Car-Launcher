@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Compatibility resources for the standalone Gradle build.
+
+    The AOSP product build supplies these names from car-ui-lib/car-resource-common. The local
+    platform artifacts intentionally contain only the Java contracts, so keep the same names in
+    the application package until those resource AARs are available. Values are deliberately
+    neutral; product overlays remain authoritative on the AVD.
+-->
+<resources>
+    <attr name="textAppearanceGridItem" format="reference" />
+    <attr name="textAppearanceGridItemSecondary" format="reference" />
+    <!-- Attributes supplied by car-media-common/car-ui-lib in the product build. -->
+    <attr name="columns" format="integer" />
+    <attr name="logoTint" format="color" />
+    <!-- ContentFormatView uses the car-media enum contract (the product resource supplies
+         the actual dimensions for each mode). Keeping the enum names here allows the
+         migrated layouts to compile without replacing the public XML API. -->
+    <attr name="logoSize">
+        <enum name="small" value="0" />
+        <enum name="medium" value="1" />
+        <enum name="large" value="2" />
+    </attr>
+    <attr name="enableDivider" format="boolean" />
+    <attr name="shouldRestoreFocus" format="boolean" />
+
+    <color name="car_neutral_90">#FFE5E2E1</color>
+    <color name="car_outline">#FFCAC4D0</color>
+    <color name="car_on_surface">#FFE6E1E5</color>
+    <color name="car_on_surface_variant">#FFCAC4D0</color>
+    <color name="car_on_background">#FFE6E1E5</color>
+    <color name="car_surface">#FF1C1B1F</color>
+    <color name="car_surface_variant">#FF49454F</color>
+    <color name="car_surface_container_high">#FF2B2930</color>
+    <color name="car_surface_container_highest">#FF36343B</color>
+    <color name="car_inverse_on_surface">#FF313033</color>
+    <color name="car_primary">#FFD0BCFF</color>
+    <color name="car_green_500">#FF41AF6A</color>
+    <color name="car_text_primary">#FFFFFFFF</color>
+    <color name="car_text_secondary">#FFCAC4D0</color>
+    <color name="car_ui_ripple_color">#33FFFFFF</color>
+    <color name="car_ui_rotary_focus_fill_color">#332196F3</color>
+    <color name="car_ui_rotary_focus_pressed_fill_color">#552196F3</color>
+    <color name="car_ui_rotary_focus_stroke_color">#FF2196F3</color>
+    <color name="car_ui_rotary_focus_pressed_stroke_color">#FFFFFFFF</color>
+
+    <dimen name="car_ui_rotary_focus_stroke_width">2dp</dimen>
+    <dimen name="car_ui_rotary_focus_pressed_stroke_width">2dp</dimen>
+
+    <style name="Theme.CarUi.NoToolbar" parent="android:style/Theme.DeviceDefault.NoActionBar" />
+    <style name="Theme.CarUi.WithToolbar" parent="android:style/Theme.DeviceDefault" />
+    <style name="TextAppearance.Car.Display" parent="android:style/TextAppearance.DeviceDefault" />
+    <style name="TextAppearance.Car.Body.Small" parent="android:style/TextAppearance.DeviceDefault.Small" />
+
+    <string name="metadata_default_title" translatable="false">Unknown</string>
+</resources>

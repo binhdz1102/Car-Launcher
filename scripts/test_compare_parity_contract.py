@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -31,6 +33,32 @@ class ManifestNormalizerTest(unittest.TestCase):
         baseline = 'A: android:name="com.android.car.carlauncher.WidgetHostActivity"'
         candidate = 'A: android:name="com.android.car.carlauncher.OtherActivity"'
         self.assertNotEqual(MODULE.normalize_manifest(baseline), MODULE.normalize_manifest(candidate))
+
+    def test_capture_schema_is_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            capture_path = Path(directory) / "capture.json"
+            capture_path.write_text(json.dumps({"status": "PASS", "schemaVersion": 1}))
+            status = MODULE.read_capture_status(Path(directory))
+            self.assertEqual(status["status"], "INVALID")
+
+    def test_contract_file_comparison_reports_added_and_removed_nodes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            baseline_dir = Path(directory) / "baseline"
+            candidate_dir = Path(directory) / "candidate"
+            baseline_dir.mkdir()
+            candidate_dir.mkdir()
+            (baseline_dir / "capture.json").write_text(json.dumps({"status": "PASS", "schemaVersion": 2}))
+            (candidate_dir / "capture.json").write_text(json.dumps({"status": "PASS", "schemaVersion": 2}))
+            (baseline_dir / "contract.txt").write_text("resource 0x7f010001 string/title\n")
+            (candidate_dir / "contract.txt").write_text("resource 0x7f010001 string/title\nresource 0x7f010002 string/extra\n")
+            result = MODULE.compare_file(
+                baseline_dir,
+                candidate_dir,
+                "contract.txt",
+                MODULE.normalize_resources,
+            )
+            self.assertFalse(result["passed"])
+            self.assertEqual(result["candidateOnlyCount"], 1)
 
 
 if __name__ == "__main__":

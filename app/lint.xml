@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    The standalone Gradle build intentionally does not package the product's car-ui, car-media,
+    or car-apps-common AARs. These classes are supplied by the AAOS image and are resolved when
+    the layouts are inflated on the target. Keep the AOSP XML contract unchanged and suppress
+    only the exact copied layouts that reference those product-owned classes. This is not a
+    baseline: new occurrences outside this allow-list still fail lint.
+-->
+<lint>
+    <issue id="MissingClass">
+        <ignore path="src/main/res/layout/calm_mode_fragment.xml" />
+        <ignore path="src/main/res/layout/car_launcher.xml" />
+        <ignore path="src/main/res/layout-land/car_launcher.xml" />
+        <ignore path="src/main/res/layout/card_content_media.xml" />
+        <ignore path="src/main/res/layout/card_fragment.xml" />
+        <ignore path="src/main/res/layout/control_bar_container.xml" />
+        <ignore path="src/main/res/layout/map_tos_activity.xml" />
+        <ignore path="src/main/res/layout/media_card_fullscreen.xml" />
+        <ignore path="src/main/res/layout/media_card_panel_content_item.xml" />
+        <ignore path="src/main/res/layout/recents_activity.xml" />
+    </issue>
+    <issue id="MissingConstraints">
+        <ignore path="src/main/res/layout/calm_mode_fragment.xml" />
+        <ignore path="src/main/res/layout/car_launcher.xml" />
+        <ignore path="src/main/res/layout-land/car_launcher.xml" />
+        <ignore path="src/main/res/layout/car_launcher_multiwindow.xml" />
+    </issue>
+    <issue id="UnknownId">
+        <ignore path="src/main/res/layout/recents_activity.xml" />
+    </issue>
+</lint>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ~ Copyright (C) 2020 The Android Open Source Project
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<resources>
+    <!-- A list of package names that provide the cards to display on the home screen -->
+    <string-array name="config_homeCardModuleClasses" translatable="false">
+        <item>com.android.car.carlauncher.homescreen.assistive.AssistiveCardModule</item>
+        <item>com.android.car.carlauncher.homescreen.audio.AudioCardModule</item>
+    </string-array>
+
+    <!--
+        A list of preferred intents to use for displaying the maps card. Intents
+        are formatted according to Intent.URI_ANDROID_APP_SCHEME.
+        This list will be used as follows:
+
+        * Pick the first item that is in the same package as the default handler
+          for CATEGORY_APP_MAPS.
+        * Pick the default handler if no such item is in the list.
+        * Pick the first item from the list if there is no default handler.
+    -->
+    <!-- Boolean value to indicate if the secondary descriptive text of homescreen cards
+         without controls should have multiple lines -->
+    <bool name="config_homecard_single_line_secondary_descriptive_text">true</bool>
+
+    <!-- Boolean value to indicate if the recents activity should open the most recent task on dismiss. -->
+    <bool name="config_launch_most_recent_task_on_recents_dismiss">true</bool>
+
+    <!-- Config values for Calm mode and information shown on the Calm mode screen -->
+    <bool name="config_enableCalmMode">true</bool>
+    <bool name="config_calmMode_showClock">true</bool>
+    <bool name="config_calmMode_showMedia">true</bool>
+    <bool name="config_calmMode_showNavigation">true</bool>
+    <bool name="config_calmMode_showDate">true</bool>
+    <bool name="config_calmMode_showTemperature">true</bool>
+    <string name="config_calmMode_componentName" translatable="false">com.android.car.carlauncher/com.android.car.carlauncher.calmmode.CalmModeActivity</string>
+
+</resources>

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "sourceOfTruth": "Launcher/",
+  "files": [
+    {
+      "source": "app/res/values/overlayable.xml",
+      "candidate": "app/src/main/res/values/overlayable.xml",
+      "overlayable": "CarLauncher",
+      "itemCount": 354,
+      "sha256": "d26c420b08c40d3c6d0f8d05603df257b798478530196d7bc5e7c36832dd208c"
+    },
+    {
+      "source": "libs/appgrid/lib/res/values/overlayable.xml",
+      "candidate": "libraries/appgrid/src/main/res/values/overlayable.xml",
+      "overlayable": "CarAppGrid-lib",
+      "itemCount": 120,
+      "sha256": "95abe0aae845342cb19074efd72120e4c742da6bb00b90d09d23d85adc59a681"
+    }
+  ],
+  "publicXml": {
+    "sourceFiles": [],
+    "policy": "AOSP does not ship a public.xml for these libraries; public Kotlin/Java APIs are checked by api-dump.json."
+  }
+}

@@ -177,6 +177,7 @@ if ($Install) {
 $aapt2 = Get-Aapt2
 & $aapt2 dump badging $ApkPath | Set-Content -LiteralPath (Join-Path $outputDir "apk-badging.txt")
 & $aapt2 dump xmltree $ApkPath --file AndroidManifest.xml | Set-Content -LiteralPath (Join-Path $outputDir "manifest.xmltree.txt")
+& $aapt2 dump resources $ApkPath | Set-Content -LiteralPath (Join-Path $outputDir "resources.txt")
 
 if ($LaunchScenario) {
     Stop-BackgroundScenarioTasks
@@ -249,6 +250,7 @@ $statusReason = if (-not $foregroundMatched) {
 $actionList = if ($null -eq $scenarioCommand) { @() } else { @($scenarioCommand) }
 
 [PSCustomObject]@{
+    schemaVersion = 2
     label = $Label
     apk = (Resolve-Path -LiteralPath $ApkPath).Path
     installed = [bool]$Install

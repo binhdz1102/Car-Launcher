@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (C) 2018 The Android Open Source Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_title" translatable="false">Car Launcher</string>
+
+    <string name="default_media_song_title" translatable="false"></string>
+
+    <string name="tap_for_more_info_text" translatable="false">Tap card for more info</string>
+    <string name="tap_to_launch_text" translatable="false">Tap card to launch</string>
+
+    <!-- InCallModel strings -->
+    <!-- Separates the duration from the ongoing_call_text -->
+    <string name="ongoing_call_duration_text_separator" translatable="false">&#160;&#8226;&#160;</string>
+    <string name="ongoing_call_text" translatable="false">Ongoing call</string>
+    <string name="dialing_call_text" translatable="false">Dialing&#8230;</string>
+
+    <!-- ProjectionModel strings -->
+    <string name="projected_launch_text" translatable="false">Launch Android Auto</string>
+    <string name="projected_onclick_launch_error_toast_text" translatable="false">Unable to launch Android Auto. No activity found.</string>
+    <string name="projection_devices" translatable="false">{count, plural,
+        =1 {# device}
+        other {# devices}
+        }
+    </string>
+
+    <!-- FakeWeatherModel strings -->
+    <string name="weather_app_name" translatable="false">Weather</string>
+    <string name="fake_weather_main_text" translatable="false">--\u00B0 Mostly sunny</string>
+    <string name="fake_weather_footer_text" translatable="false">Mountain View &#8226; H: --\u00B0 L: --\u00B0</string>
+
+    <!-- Separator between current time and max time in control bar, optional times [CHAR_LIMIT=5] -->
+    <string name="times_separator" translatable="false"> / </string>
+    <string name="recents_empty_state_text" translatable="false">No recent items</string>
+    <string name="recents_clear_all_text" translatable="false">Clear All</string>
+    <string name="failure_opening_recent_task_message" translatable="false">App isn\'t available</string>
+    <!--
+        A list of package names that are excluded from recents.
+        DO NOT TRANSLATE.
+    -->
+    <string-array name="packages_hidden_from_recents" translatable="false">
+    </string-array>
+
+    <!-- Calm mode strings -->
+    <string name="calm_mode_separator" translatable="false">\u0020\u0020\u0020\u2022\u0020\u0020\u0020</string>
+
+    <!-- Fullscreen media card strings -->
+    <string name="media_card_queue_header_title" translatable="false">Queue</string>
+    <string name="media_card_history_header_title" translatable="false">Media Source</string>
+
+    <!-- MapTos strings -->
+</resources>
