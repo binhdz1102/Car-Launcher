@@ -16,6 +16,8 @@ import com.android.car.carlauncher.core.model.LauncherComponent
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridAvailability
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridItem
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridItemType
+import com.android.car.carlauncher.feature.appgrid.domain.AppGridOrientation
+import com.android.car.carlauncher.feature.appgrid.domain.AppGridPaging
 
 class AppGridAdapter(
     private val onClick: (AppGridItem) -> Unit,
@@ -24,6 +26,10 @@ class AppGridAdapter(
     private val items = mutableListOf<AppGridItem>()
     private var cellWidth = ViewGroup.LayoutParams.WRAP_CONTENT
     private var cellHeight = ViewGroup.LayoutParams.WRAP_CONTENT
+    private var orientation = AppGridOrientation.HORIZONTAL
+    private var rtl = false
+    private var columns = DEFAULT_COLUMNS
+    private var rows = DEFAULT_ROWS
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -37,7 +43,8 @@ class AppGridAdapter(
         holder: AppViewHolder,
         position: Int,
     ) {
-        holder.bind(items[position], onClick, onLongClick)
+        val businessIndex = AppGridPaging.gridPositionToAdapterIndex(position, columns, rows, orientation, rtl)
+        holder.bind(items[businessIndex], onClick, onLongClick)
         holder.itemView.layoutParams =
             holder.itemView.layoutParams.apply {
                 width = cellWidth
@@ -78,7 +85,9 @@ class AppGridAdapter(
         toPosition: Int,
     ): Boolean {
         if (fromPosition !in items.indices || toPosition !in items.indices) return false
-        items.add(toPosition, items.removeAt(fromPosition))
+        val fromIndex = AppGridPaging.gridPositionToAdapterIndex(fromPosition, columns, rows, orientation, rtl)
+        val toIndex = AppGridPaging.gridPositionToAdapterIndex(toPosition, columns, rows, orientation, rtl)
+        items.add(toIndex, items.removeAt(fromIndex))
         notifyItemMoved(fromPosition, toPosition)
         return true
     }
@@ -92,6 +101,20 @@ class AppGridAdapter(
         if (cellWidth == width && cellHeight == height) return
         cellWidth = width
         cellHeight = height
+        notifyDataSetChanged()
+    }
+
+    fun setPaging(
+        orientation: AppGridOrientation,
+        rtl: Boolean,
+        columns: Int,
+        rows: Int,
+    ) {
+        require(columns > 0 && rows > 0) { "Grid dimensions must be positive." }
+        this.orientation = orientation
+        this.rtl = rtl
+        this.columns = columns
+        this.rows = rows
         notifyDataSetChanged()
     }
 
@@ -158,6 +181,8 @@ class AppGridAdapter(
             }
 
     private companion object {
+        const val DEFAULT_COLUMNS = 5
+        const val DEFAULT_ROWS = 4
         const val DISABLED_ALPHA = 0.45f
     }
 }

@@ -4,6 +4,11 @@ import com.android.car.carlauncher.core.model.DrivingRestriction
 
 /** Pure app-grid policy, kept independent of Android services and persistence. */
 object AppGridStateReducer {
+    fun recentItems(
+        items: List<AppGridItem>,
+        mode: AppGridMode,
+    ): List<AppGridItem> = filter(items.filter(AppGridItem::isRecent), mode, query = "")
+
     fun arrange(
         discovered: List<AppGridItem>,
         orderedComponents: List<String>,

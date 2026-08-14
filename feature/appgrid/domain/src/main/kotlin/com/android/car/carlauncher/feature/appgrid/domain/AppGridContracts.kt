@@ -23,8 +23,16 @@ enum class AppGridMode(
     companion object {
         const val INTENT_EXTRA = "com.android.car.carlauncher.mode"
 
-        /** Unknown external input must not crash the exported activity. */
-        fun fromIntentValue(value: String?): AppGridMode = entries.firstOrNull { it.name == value } ?: ALL_APPS
+        /**
+         * A missing extra means the public ACTION_APP_GRID contract's default ALL_APPS mode.
+         * Unknown non-null values are rejected like the AOSP exported activity so malformed
+         * external intents cannot silently open a different surface.
+         */
+        fun fromIntentValue(value: String?): AppGridMode {
+            if (value == null) return ALL_APPS
+            return entries.firstOrNull { it.name == value }
+                ?: throw IllegalArgumentException("Received invalid app-grid mode: $value")
+        }
     }
 }
 

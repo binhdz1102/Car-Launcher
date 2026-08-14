@@ -31,6 +31,16 @@ class AppGridStateReducerTest {
     }
 
     @Test
+    fun recentItemsUsesSameModeClassificationAsTheMainGrid() {
+        val recentActivity = item("Maps", AppGridItemType.ACTIVITY, recent = true)
+        val recentMedia = item("Music", AppGridItemType.MEDIA_SERVICE, recent = true)
+        assertEquals(
+            listOf(recentMedia),
+            AppGridStateReducer.recentItems(listOf(recentActivity, recentMedia), AppGridMode.MEDIA_ONLY),
+        )
+    }
+
+    @Test
     fun reorderOnlyAllowedWhileParkedWithUnfilteredAllApps() {
         assertTrue(AppGridStateReducer.canReorder(DrivingRestriction.UNRESTRICTED, "", AppGridMode.ALL_APPS))
         assertFalse(AppGridStateReducer.canReorder(DrivingRestriction.NO_KEYBOARD, "", AppGridMode.ALL_APPS))

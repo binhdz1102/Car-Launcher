@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.android.car.carlauncher.core.model.DisplayTarget
 import com.android.car.carlauncher.feature.appgrid.domain.AppGridMode
@@ -60,6 +61,8 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
         currentBinding.appGrid.adapter = adapter
         currentBinding.appGrid.layoutManager =
             GridLayoutManager(requireContext(), GRID_COLUMNS, RecyclerView.VERTICAL, false)
+        currentBinding.appGrid.layoutDirection = View.LAYOUT_DIRECTION_LTR
+        PagerSnapHelper().attachToRecyclerView(currentBinding.appGrid)
         attachReorderController(currentBinding.appGrid)
 
         currentBinding.appGridClose.setOnClickListener { requireActivity().finish() }
@@ -180,13 +183,18 @@ class AppGridFragment : Fragment(R.layout.fragment_app_grid) {
         val recycler = binding?.appGrid ?: return
         val layoutManager = recycler.layoutManager as? GridLayoutManager ?: return
         layoutManager.orientation =
-            if (orientation == AppGridOrientation.VERTICAL) {
+            if (orientation == AppGridOrientation.HORIZONTAL) {
                 RecyclerView.HORIZONTAL
             } else {
-                // Stock horizontal App Grid fills five columns before advancing a row.
                 RecyclerView.VERTICAL
             }
-        layoutManager.spanCount = if (orientation == AppGridOrientation.VERTICAL) GRID_ROWS else GRID_COLUMNS
+        layoutManager.spanCount = if (orientation == AppGridOrientation.HORIZONTAL) GRID_ROWS else GRID_COLUMNS
+        adapter.setPaging(
+            orientation = orientation,
+            rtl = resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL,
+            columns = GRID_COLUMNS,
+            rows = GRID_ROWS,
+        )
         recycler.post {
             val availableWidth = recycler.width - recycler.paddingLeft - recycler.paddingRight
             val availableHeight = recycler.height - recycler.paddingTop - recycler.paddingBottom
