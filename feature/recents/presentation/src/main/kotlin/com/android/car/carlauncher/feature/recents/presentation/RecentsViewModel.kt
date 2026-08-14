@@ -6,8 +6,10 @@ import com.android.car.carlauncher.core.model.DisplayTarget
 import com.android.car.carlauncher.feature.recents.domain.RecentTask
 import com.android.car.carlauncher.feature.recents.domain.RecentsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -21,6 +23,10 @@ class RecentsViewModel
     constructor(
         private val repository: RecentsRepository,
     ) : ViewModel() {
+        private val mutableEvents = MutableSharedFlow<RecentsEvent>(extraBufferCapacity = 4)
+
+        val events = mutableEvents.asSharedFlow()
+
         val uiState: StateFlow<RecentsUiState> =
             repository.state
                 .map { state ->
@@ -69,9 +75,13 @@ class RecentsViewModel
 
         fun clearAll() {
             viewModelScope.launch {
-                repository.clearAll().onFailure { error ->
-                    Timber.tag(TAG).w(error, "Unable to clear recent tasks")
-                }
+                repository.clearAll().fold(
+                    onSuccess = { mutableEvents.emit(RecentsEvent.Cleared) },
+                    onFailure = { error ->
+                        Timber.tag(TAG).w(error, "Unable to clear recent tasks")
+                        mutableEvents.emit(RecentsEvent.Error(error.message ?: "Unable to clear recent tasks."))
+                    },
+                )
             }
         }
 
@@ -80,3 +90,11 @@ class RecentsViewModel
             const val STOP_TIMEOUT_MILLIS = 5_000L
         }
     }
+
+sealed interface RecentsEvent {
+    data object Cleared : RecentsEvent
+
+    data class Error(
+        val message: String,
+    ) : RecentsEvent
+}

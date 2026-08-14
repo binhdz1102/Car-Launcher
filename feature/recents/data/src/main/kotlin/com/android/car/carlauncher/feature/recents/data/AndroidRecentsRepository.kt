@@ -169,6 +169,7 @@ class AndroidRecentsRepository
                         thumbnailBytes = taskThumbnail(taskId),
                         restriction = restriction.level,
                         isEnabled = isAllowed(component, restriction),
+                        displayId = displayIdCompat(),
                     )
                 }
 

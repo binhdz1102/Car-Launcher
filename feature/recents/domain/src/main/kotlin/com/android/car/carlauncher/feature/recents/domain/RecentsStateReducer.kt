@@ -8,4 +8,9 @@ object RecentsStateReducer {
         taskComponent: String?,
         recentsComponent: String,
     ): Boolean = taskComponent != null && taskComponent != recentsComponent
+
+    fun orderedForDisplay(
+        tasks: List<RecentTask>,
+        displayId: Int,
+    ): List<RecentTask> = stableTasks(tasks).filter { task -> task.displayId == displayId }
 }

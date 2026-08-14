@@ -4,17 +4,21 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.android.car.carlauncher.R
 import com.android.car.carlauncher.core.model.DisplayTarget
 import com.android.car.carlauncher.core.ui.applySystemBarInsets
 import com.android.car.carlauncher.feature.recents.presentation.RecentsAdapter
+import com.android.car.carlauncher.feature.recents.presentation.RecentsEvent
 import com.android.car.carlauncher.feature.recents.presentation.RecentsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -33,8 +37,25 @@ class CarRecentsActivity : AppCompatActivity() {
         val empty = findViewById<TextView>(R.id.recents_empty)
         val list = findViewById<RecyclerView>(R.id.recents_list)
         val adapter = RecentsAdapter(viewModel::launch, viewModel::dismiss)
-        list.layoutManager = GridLayoutManager(this, RECENTS_SPAN_COUNT)
+        list.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
         list.adapter = adapter
+        PagerSnapHelper().attachToRecyclerView(list)
+        ItemTouchHelper(
+            object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+                override fun onMove(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder,
+                    target: RecyclerView.ViewHolder,
+                ): Boolean = false
+
+                override fun onSwiped(
+                    viewHolder: RecyclerView.ViewHolder,
+                    direction: Int,
+                ) {
+                    adapter.currentList.getOrNull(viewHolder.bindingAdapterPosition)?.let(viewModel::dismiss)
+                }
+            },
+        ).attachToRecyclerView(list)
         findViewById<View>(R.id.recents_clear_all).setOnClickListener { viewModel.clearAll() }
 
         lifecycleScope.launch {
@@ -44,6 +65,16 @@ class CarRecentsActivity : AppCompatActivity() {
                     val isEmpty = state.tasks.isEmpty()
                     empty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                     list.visibility = if (isEmpty) View.GONE else View.VISIBLE
+                }
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        RecentsEvent.Cleared -> launchHome()
+                        is RecentsEvent.Error -> Toast.makeText(this@CarRecentsActivity, event.message, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -84,9 +115,8 @@ class CarRecentsActivity : AppCompatActivity() {
         )
     }
 
-    private companion object {
+    companion object {
         const val TAG = "CarLauncher.CarRecents"
-        const val RECENTS_SPAN_COUNT = 3
         const val OPEN_RECENT_TASK_ACTION =
             "com.android.car.carlauncher.recents.OPEN_RECENT_TASK_ACTION"
     }

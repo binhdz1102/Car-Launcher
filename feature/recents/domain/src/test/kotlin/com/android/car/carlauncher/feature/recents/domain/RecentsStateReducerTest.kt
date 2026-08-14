@@ -23,6 +23,15 @@ class RecentsStateReducerTest {
         assertTrue(RecentsStateReducer.canDismissToTask("com.example.maps/.MapsActivity", recents))
     }
 
+    @Test
+    fun orderedForDisplay_deduplicatesAndKeepsPlatformOrder() {
+        val first = task(taskId = 1, label = "Maps").copy(displayId = 1)
+        val duplicate = task(taskId = 1, label = "stale").copy(displayId = 1)
+        val otherDisplay = task(taskId = 2, label = "Music").copy(displayId = 0)
+
+        assertEquals(listOf(first), RecentsStateReducer.orderedForDisplay(listOf(first, duplicate, otherDisplay), 1))
+    }
+
     private fun task(
         taskId: Int,
         label: String,

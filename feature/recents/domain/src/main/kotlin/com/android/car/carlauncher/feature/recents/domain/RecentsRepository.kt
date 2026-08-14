@@ -12,6 +12,7 @@ data class RecentTask(
     val thumbnailBytes: ByteArray? = null,
     val restriction: DrivingRestriction = DrivingRestriction.UNRESTRICTED,
     val isEnabled: Boolean = true,
+    val displayId: Int = 0,
 ) {
     init {
         require(taskId >= 0) { "taskId must be non-negative" }
