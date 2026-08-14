@@ -1,6 +1,7 @@
 package com.android.car.carlauncher.feature.launcher.presentation
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.View
 import android.widget.PopupMenu
@@ -17,10 +18,14 @@ import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskState
 import com.android.car.carlauncher.feature.home.presentation.AndroidHomeTaskViewHost
 import com.android.car.carlauncher.feature.home.presentation.HomeTaskViewEvent
 import com.android.car.carlauncher.feature.home.presentation.HomeTaskViewHost
+import com.android.car.carlauncher.feature.launcher.domain.MediaHistoryItem
 import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback
+import com.android.car.carlauncher.feature.launcher.domain.MediaQueueItem
 import com.android.car.carlauncher.feature.launcher.domain.MediaSource
 import com.android.car.carlauncher.feature.media.domain.AssistiveCard
 import com.android.car.carlauncher.feature.media.domain.CallCard
+import com.android.car.carlauncher.feature.media.domain.CallCardState
+import com.android.car.carlauncher.feature.media.domain.CallDurationFormatter
 import com.android.car.carlauncher.feature.media.presentation.MediaArtworkDecoder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -125,6 +130,15 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
             val state = viewModel.uiState.value
             showMediaSources(view, state.sources, hostInteraction)
         }
+        view.findViewById<View>(R.id.media_queue_button).setOnClickListener {
+            showQueue(viewModel.uiState.value.queue, view.findViewById(R.id.media_queue_button))
+        }
+        view.findViewById<View>(R.id.media_history_button).setOnClickListener {
+            showHistory(viewModel.uiState.value.history, view.findViewById(R.id.media_history_button))
+        }
+        view.findViewById<View>(R.id.media_actions_button).setOnClickListener {
+            showCustomActions(viewModel.uiState.value.media.customActions, view.findViewById(R.id.media_actions_button))
+        }
         view.findViewById<View>(R.id.assistive_card).setOnClickListener {
             viewModel.uiState.value.assistive?.let { card ->
                 viewModel.handleHomeCardAction(LauncherHomeCardAction.LaunchAssistive(card))
@@ -203,7 +217,13 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         if (card == null) return
         view.findViewById<android.widget.TextView>(R.id.assistive_title).text = card.title
         view.findViewById<android.widget.TextView>(R.id.assistive_body).text = card.body
-        view.findViewById<android.widget.TextView>(R.id.assistive_footer).text = card.footer.orEmpty()
+        view.findViewById<android.widget.TextView>(R.id.assistive_footer).text =
+            card.footer
+                ?: card.deviceCount
+                    .takeIf { it > 0 }
+                    ?.let { count ->
+                        resources.getQuantityString(R.plurals.projection_devices, count, count)
+                    }.orEmpty()
     }
 
     private fun renderMedia(
@@ -257,6 +277,13 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
             if (playback.isPlaying) getString(R.string.media_pause) else getString(R.string.media_play)
         view.findViewById<View>(R.id.media_source_button).isEnabled = true
         view.findViewById<View>(R.id.media_center).isEnabled = playback.sourceComponent != null
+        view.findViewById<View>(R.id.media_queue_button).isEnabled =
+            viewModel.uiState.value.queue
+                .isNotEmpty()
+        view.findViewById<View>(R.id.media_history_button).isEnabled =
+            viewModel.uiState.value.history
+                .isNotEmpty()
+        view.findViewById<View>(R.id.media_actions_button).isEnabled = playback.customActions.isNotEmpty()
     }
 
     private fun renderCall(
@@ -265,10 +292,15 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
     ) {
         view.findViewById<android.widget.TextView>(R.id.media_source).text = call.appLabel
         view.findViewById<android.widget.TextView>(R.id.media_title).text =
-            call.caller.ifBlank { getString(R.string.call_in_progress) }
+            call.contactName?.takeIf(String::isNotBlank)
+                ?: call.caller.ifBlank { getString(R.string.call_in_progress) }
         view.findViewById<android.widget.TextView>(R.id.media_artist).text =
-            getString(R.string.call_state, call.state.name.lowercase())
-        view.findViewById<android.widget.ImageView>(R.id.media_art).setImageResource(R.drawable.ic_media_note)
+            callStatus(call)
+        view.findViewById<android.widget.ImageView>(R.id.media_art).apply {
+            call.avatarBytes?.let { bytes ->
+                setImageBitmap(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
+            } ?: setImageResource(R.drawable.ic_media_note)
+        }
         view.findViewById<android.widget.SeekBar>(R.id.media_progress).apply {
             isEnabled = false
             progress = 0
@@ -291,6 +323,20 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
         }
         view.findViewById<View>(R.id.media_source_button).isEnabled = false
         view.findViewById<View>(R.id.media_center).isEnabled = false
+        view.findViewById<View>(R.id.media_queue_button).isEnabled = false
+        view.findViewById<View>(R.id.media_history_button).isEnabled = false
+        view.findViewById<View>(R.id.media_actions_button).isEnabled = false
+    }
+
+    private fun callStatus(call: CallCard): String {
+        val status =
+            when (call.state) {
+                CallCardState.DIALING -> getString(R.string.call_dialing)
+                else -> getString(R.string.call_ongoing)
+            }
+        return CallDurationFormatter.format(call.connectedElapsedRealtimeMs)?.let { duration ->
+            getString(R.string.call_duration_separator).let { separator -> "$status$separator$duration" }
+        } ?: status
     }
 
     private fun showMediaSources(
@@ -312,6 +358,51 @@ class LauncherFragment : Fragment(R.layout.fragment_launcher) {
                     true
                 }
             }.show()
+    }
+
+    private fun showQueue(
+        queue: List<MediaQueueItem>,
+        anchor: View,
+    ) {
+        if (queue.isEmpty()) return
+        PopupMenu(requireContext(), anchor).apply {
+            queue.forEach { item ->
+                menu.add(item.title.ifBlank { item.subtitle })
+            }
+            show()
+        }
+    }
+
+    private fun showHistory(
+        history: List<MediaHistoryItem>,
+        anchor: View,
+    ) {
+        if (history.isEmpty()) return
+        PopupMenu(requireContext(), anchor).apply {
+            history.forEach { item ->
+                menu.add(item.title.ifBlank { item.sourceLabel })
+            }
+            show()
+        }
+    }
+
+    private fun showCustomActions(
+        actions: List<com.android.car.carlauncher.feature.launcher.domain.MediaCustomAction>,
+        anchor: View,
+    ) {
+        if (actions.isEmpty()) return
+        PopupMenu(requireContext(), anchor).apply {
+            actions.forEachIndexed { index, action ->
+                menu.add(0, index, index, action.title)
+            }
+            setOnMenuItemClickListener { item ->
+                actions.getOrNull(item.itemId)?.let { action ->
+                    viewModel.handleMediaAction(LauncherMediaAction.CustomAction(action))
+                }
+                true
+            }
+            show()
+        }
     }
 
     private fun openAppGrid() {

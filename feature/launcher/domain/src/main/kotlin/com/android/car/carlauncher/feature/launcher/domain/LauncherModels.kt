@@ -5,6 +5,8 @@ import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskError
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskState
 import com.android.car.carlauncher.feature.home.domain.HomeEmbeddedTaskTarget
 import com.android.car.carlauncher.feature.home.domain.HomeTaskPaneMode
+import com.android.car.carlauncher.feature.media.domain.MediaCustomAction as FeatureMediaCustomAction
+import com.android.car.carlauncher.feature.media.domain.MediaHistoryItem as FeatureMediaHistoryItem
 import com.android.car.carlauncher.feature.media.domain.MediaPlayback as FeatureMediaPlayback
 import com.android.car.carlauncher.feature.media.domain.MediaQueueItem as FeatureMediaQueueItem
 import com.android.car.carlauncher.feature.media.domain.MediaRepository as FeatureMediaRepository
@@ -23,6 +25,8 @@ typealias EmbeddedTaskError = HomeEmbeddedTaskError
 typealias MediaPlayback = FeatureMediaPlayback
 typealias MediaSource = FeatureMediaSource
 typealias MediaQueueItem = FeatureMediaQueueItem
+typealias MediaHistoryItem = FeatureMediaHistoryItem
+typealias MediaCustomAction = FeatureMediaCustomAction
 typealias MediaRepository = FeatureMediaRepository
 
 data class LaunchableApp(

@@ -120,6 +120,11 @@ private data class ProjectionEvent(
                                 details
                                     .firstOrNull { it.packageName == targetPackage }
                                     ?.deviceStatusMessage(),
+                            deviceCount =
+                                details
+                                    .firstOrNull { it.packageName == targetPackage }
+                                    ?.connectedMobileDevices
+                                    ?.size ?: 0,
                             launchIntentUri =
                                 context.packageManager
                                     .getLaunchIntentForPackage(targetPackage)
@@ -136,7 +141,7 @@ private fun ProjectionStatus.deviceStatusMessage(): String? {
     return when {
         projecting.size == 1 -> projecting.first().name
         projecting.isEmpty() && nonProjecting.size == 1 -> nonProjecting.first().name
-        devices.isNotEmpty() -> "${devices.size} devices"
+        devices.isNotEmpty() -> null
         else -> null
     }
 }

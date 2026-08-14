@@ -3,11 +3,14 @@ package com.android.car.carlauncher.feature.media.data
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.SystemClock
+import android.provider.ContactsContract
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.TelecomManager
 import com.android.car.carlauncher.core.platform.ApplicationScope
+import com.android.car.carlauncher.core.platform.CoroutineDispatchers
 import com.android.car.carlauncher.feature.media.domain.CallCard
 import com.android.car.carlauncher.feature.media.domain.CallCardState
 import com.android.car.carlauncher.feature.media.domain.CallRepository
@@ -35,6 +38,7 @@ class CallStateStore
     constructor(
         @param:ApplicationContext private val context: Context,
         @param:ApplicationScope private val scope: CoroutineScope,
+        private val dispatchers: CoroutineDispatchers,
     ) {
         private val events =
             MutableSharedFlow<CallEvent>(
@@ -46,6 +50,7 @@ class CallStateStore
 
         private var muted = false
         private var currentCall: Call? = null
+        private var contactLookupJob: kotlinx.coroutines.Job? = null
 
         val activeCall: StateFlow<CallCard?> = mutableActiveCall.asStateFlow()
 
@@ -97,7 +102,27 @@ class CallStateStore
                     .sortedBy(TrackedCall::priority)
                     .firstOrNull()
                     ?.call
-            mutableActiveCall.value = currentCall?.toCard(muted)
+            val active = currentCall
+            mutableActiveCall.value = active?.toCard(muted)
+            contactLookupJob?.cancel()
+            if (active != null) {
+                contactLookupJob =
+                    scope.launch(dispatchers.io) {
+                        val contact =
+                            lookupContact(
+                                active.details.handle
+                                    ?.schemeSpecificPart
+                                    .orEmpty(),
+                            )
+                        if (currentCall === active) {
+                            mutableActiveCall.value =
+                                active.toCard(muted).copy(
+                                    contactName = contact?.name,
+                                    avatarBytes = contact?.avatarBytes,
+                                )
+                        }
+                    }
+            }
         }
 
         @Suppress("DEPRECATION")
@@ -131,6 +156,38 @@ class CallStateStore
             @Suppress("DEPRECATION")
             val priority: Int
                 get() = call.state.priority()
+        }
+
+        private data class ContactInfo(
+            val name: String?,
+            val avatarBytes: ByteArray?,
+        )
+
+        private fun lookupContact(number: String): ContactInfo? {
+            if (number.isBlank()) return null
+            val lookupUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number))
+            return runCatching {
+                context.contentResolver
+                    .query(
+                        lookupUri,
+                        arrayOf(
+                            ContactsContract.PhoneLookup.DISPLAY_NAME,
+                            ContactsContract.PhoneLookup.PHOTO_THUMBNAIL_URI,
+                        ),
+                        null,
+                        null,
+                        null,
+                    )?.use { cursor ->
+                        if (!cursor.moveToFirst()) return@use null
+                        val name = cursor.getString(0)
+                        val avatarUri = cursor.getString(1)?.let(Uri::parse)
+                        val avatar =
+                            avatarUri?.let { uri ->
+                                context.contentResolver.openInputStream(uri)?.use { input -> input.readBytes() }
+                            }
+                        ContactInfo(name = name, avatarBytes = avatar)
+                    }
+            }.getOrNull()
         }
 
         private sealed interface CallEvent {

@@ -87,6 +87,7 @@ class HomeCardCoordinatorTest {
         override val playback: StateFlow<MediaPlayback> = MutableStateFlow(MediaPlayback())
         override val sources: StateFlow<List<MediaSource>> = MutableStateFlow(emptyList())
         override val queue: StateFlow<List<MediaQueueItem>> = MutableStateFlow(emptyList())
+        override val history: StateFlow<List<MediaHistoryItem>> = MutableStateFlow(emptyList())
 
         override fun playPause() = Unit
 
@@ -99,6 +100,8 @@ class HomeCardCoordinatorTest {
         override fun selectSource(source: MediaSource) = Unit
 
         override fun openMediaCenter() = Unit
+
+        override fun sendCustomAction(action: MediaCustomAction) = Unit
     }
 
     private class FakeCallRepository(

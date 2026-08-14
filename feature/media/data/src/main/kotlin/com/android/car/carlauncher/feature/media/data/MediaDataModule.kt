@@ -1,5 +1,6 @@
 package com.android.car.carlauncher.feature.media.data
 
+import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
 import com.android.car.carlauncher.feature.media.domain.AssistiveRepository
 import com.android.car.carlauncher.feature.media.domain.CallRepository
 import com.android.car.carlauncher.feature.media.domain.MediaRepository
@@ -34,12 +35,14 @@ abstract class MediaDataModule {
             callRepository: CallRepository,
             projectionRepository: ProjectionRepository,
             assistiveRepository: AssistiveRepository,
+            featureFlags: LauncherFeatureFlags,
         ): com.android.car.carlauncher.feature.media.domain.HomeCardCoordinator =
             com.android.car.carlauncher.feature.media.domain.HomeCardCoordinator(
                 mediaRepository = mediaRepository,
                 callRepository = callRepository,
                 projectionRepository = projectionRepository,
                 assistiveRepository = assistiveRepository,
+                fullscreenMediaEnabled = featureFlags.mediaCardFullscreen,
             )
     }
 }

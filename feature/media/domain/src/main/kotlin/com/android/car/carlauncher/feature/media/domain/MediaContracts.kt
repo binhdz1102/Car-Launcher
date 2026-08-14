@@ -25,12 +25,19 @@ data class MediaPlayback(
     val canSkipPrevious: Boolean = false,
     val canSkipNext: Boolean = false,
     val canSeek: Boolean = false,
+    val customActions: List<MediaCustomAction> = emptyList(),
 ) {
     /** Transitional accessor for legacy consumers while they move to [artwork]. */
     @Deprecated("Use artwork and its stable key instead.")
     val artworkBytes: ByteArray?
         get() = artwork?.encodedBytes
 }
+
+/** A transport action supplied by the active media session (for example thumbs-up). */
+data class MediaCustomAction(
+    val action: String,
+    val title: String,
+)
 
 data class MediaSource(
     val componentName: String,
@@ -43,11 +50,22 @@ data class MediaQueueItem(
     val subtitle: String,
 )
 
+/** A source/title pair retained for the fullscreen media history surface. */
+data class MediaHistoryItem(
+    val id: String,
+    val sourcePackage: String,
+    val sourceLabel: String,
+    val title: String,
+    val subtitle: String = "",
+    val artwork: MediaArtwork? = null,
+)
+
 /** Platform media-session boundary for the Home media card. */
 interface MediaRepository {
     val playback: StateFlow<MediaPlayback>
     val sources: StateFlow<List<MediaSource>>
     val queue: StateFlow<List<MediaQueueItem>>
+    val history: StateFlow<List<MediaHistoryItem>>
 
     fun playPause()
 
@@ -60,6 +78,8 @@ interface MediaRepository {
     fun selectSource(source: MediaSource)
 
     fun openMediaCenter()
+
+    fun sendCustomAction(action: MediaCustomAction)
 }
 
 enum class CallCardState {
@@ -79,6 +99,8 @@ data class CallCard(
     val state: CallCardState,
     val isMuted: Boolean = false,
     val connectedElapsedRealtimeMs: Long? = null,
+    val contactName: String? = null,
+    val avatarBytes: ByteArray? = null,
 )
 
 interface CallRepository {
@@ -97,6 +119,7 @@ data class ProjectionCard(
     val appLabel: String,
     val statusMessage: String? = null,
     val launchIntentUri: String? = null,
+    val deviceCount: Int = 0,
 )
 
 interface ProjectionRepository {
@@ -113,6 +136,7 @@ data class AssistiveCard(
     val body: String,
     val footer: String? = null,
     val launchIntentUri: String? = null,
+    val deviceCount: Int = 0,
 )
 
 interface AssistiveRepository {
@@ -123,6 +147,7 @@ interface AssistiveRepository {
 
 data class HomeCardsState(
     val media: MediaPlayback = MediaPlayback(),
+    val mediaVariant: MediaCardVariant = MediaCardVariant.EMPTY,
     val activeCall: CallCard? = null,
     val projection: ProjectionCard? = null,
     val assistive: AssistiveCard? = null,
@@ -137,6 +162,7 @@ class HomeCardCoordinator(
     private val callRepository: CallRepository,
     private val projectionRepository: ProjectionRepository,
     private val assistiveRepository: AssistiveRepository,
+    private val fullscreenMediaEnabled: Boolean = true,
 ) {
     val states: Flow<HomeCardsState> =
         kotlinx.coroutines.flow.combine(
@@ -147,21 +173,14 @@ class HomeCardCoordinator(
         ) { media, call, projection, assistiveCards ->
             HomeCardsState(
                 media = media,
+                mediaVariant =
+                    MediaCardPolicy.visibleVariant(
+                        hasActivePlayback = media.sourcePackage != null,
+                        fullscreenEnabled = fullscreenMediaEnabled,
+                    ),
                 activeCall = call,
                 projection = projection,
-                assistive =
-                    projection?.toAssistiveCard()
-                        ?: assistiveCards.sortedBy(AssistiveCard::priority).firstOrNull(),
+                assistive = MediaCardPolicy.assistiveCard(projection, assistiveCards),
             )
         }
-
-    private fun ProjectionCard.toAssistiveCard(): AssistiveCard =
-        AssistiveCard(
-            id = "projection:$packageName",
-            priority = Int.MIN_VALUE,
-            title = appLabel,
-            body = "Projected phone",
-            footer = statusMessage,
-            launchIntentUri = launchIntentUri,
-        )
 }

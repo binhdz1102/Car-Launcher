@@ -12,6 +12,8 @@ import com.android.car.carlauncher.feature.home.domain.HomeTaskStateMachine
 import com.android.car.carlauncher.feature.home.domain.NavigationTargetInvalidation
 import com.android.car.carlauncher.feature.launcher.domain.LaunchableApp
 import com.android.car.carlauncher.feature.launcher.domain.LauncherAppsRepository
+import com.android.car.carlauncher.feature.launcher.domain.MediaCustomAction
+import com.android.car.carlauncher.feature.launcher.domain.MediaHistoryItem
 import com.android.car.carlauncher.feature.launcher.domain.MediaPlayback
 import com.android.car.carlauncher.feature.launcher.domain.MediaQueueItem
 import com.android.car.carlauncher.feature.launcher.domain.MediaRepository
@@ -41,6 +43,9 @@ data class LauncherUiState(
     val media: MediaPlayback = MediaPlayback(),
     val sources: List<MediaSource> = emptyList(),
     val queue: List<MediaQueueItem> = emptyList(),
+    val history: List<MediaHistoryItem> = emptyList(),
+    val mediaVariant: com.android.car.carlauncher.feature.media.domain.MediaCardVariant =
+        com.android.car.carlauncher.feature.media.domain.MediaCardVariant.EMPTY,
     val activeCall: CallCard? = null,
     val assistive: AssistiveCard? = null,
 ) {
@@ -71,6 +76,10 @@ sealed interface LauncherMediaAction {
 
     data class SelectSource(
         val source: MediaSource,
+    ) : LauncherMediaAction
+
+    data class CustomAction(
+        val action: MediaCustomAction,
     ) : LauncherMediaAction
 }
 
@@ -104,18 +113,28 @@ class LauncherViewModel
         private var selectionJob: Job? = null
         private var selectionGeneration = 0L
 
-        val uiState: StateFlow<LauncherUiState> =
+        private val mediaSnapshot =
             combine(
-                mutableUiState,
                 mediaRepository.playback,
                 mediaRepository.sources,
                 mediaRepository.queue,
+                mediaRepository.history,
+            ) { media, sources, queue, history ->
+                MediaSnapshot(media, sources, queue, history)
+            }
+
+        val uiState: StateFlow<LauncherUiState> =
+            combine(
+                mutableUiState,
+                mediaSnapshot,
                 homeCardCoordinator.states,
-            ) { state, media, sources, queue, homeCards ->
+            ) { state, media, homeCards ->
                 state.copy(
-                    media = media,
-                    sources = sources,
-                    queue = queue,
+                    media = media.playback,
+                    sources = media.sources,
+                    queue = media.queue,
+                    history = media.history,
+                    mediaVariant = homeCards.mediaVariant,
                     activeCall = homeCards.activeCall,
                     assistive = homeCards.assistive,
                 )
@@ -233,6 +252,7 @@ class LauncherViewModel
                 LauncherMediaAction.OpenCenter -> mediaRepository.openMediaCenter()
                 is LauncherMediaAction.Seek -> mediaRepository.seekTo(action.positionMs)
                 is LauncherMediaAction.SelectSource -> mediaRepository.selectSource(action.source)
+                is LauncherMediaAction.CustomAction -> mediaRepository.sendCustomAction(action.action)
             }
         }
 
@@ -302,4 +322,11 @@ class LauncherViewModel
         private companion object {
             const val TAG = "CarLauncher.LauncherViewModel"
         }
+
+        private data class MediaSnapshot(
+            val playback: MediaPlayback,
+            val sources: List<MediaSource>,
+            val queue: List<MediaQueueItem>,
+            val history: List<MediaHistoryItem>,
+        )
     }

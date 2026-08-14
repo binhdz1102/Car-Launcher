@@ -14,6 +14,8 @@ import android.os.SystemClock
 import com.android.car.carlauncher.core.platform.ApplicationScope
 import com.android.car.carlauncher.core.platform.CarServiceConnection
 import com.android.car.carlauncher.core.platform.LauncherFeatureFlags
+import com.android.car.carlauncher.feature.media.domain.MediaCustomAction
+import com.android.car.carlauncher.feature.media.domain.MediaHistoryItem
 import com.android.car.carlauncher.feature.media.domain.MediaPlayback
 import com.android.car.carlauncher.feature.media.domain.MediaQueueItem
 import com.android.car.carlauncher.feature.media.domain.MediaRepository
@@ -67,6 +69,7 @@ class AndroidMediaRepository
         private val mutablePlayback = MutableStateFlow(MediaPlayback())
         private val mutableSources = MutableStateFlow(emptyList<MediaSource>())
         private val mutableQueue = MutableStateFlow(emptyList<MediaQueueItem>())
+        private val mutableHistory = MutableStateFlow(emptyList<MediaHistoryItem>())
 
         private var carMediaManager: CarMediaManager? = null
         private var controller: MediaController? = null
@@ -75,6 +78,7 @@ class AndroidMediaRepository
         override val playback: StateFlow<MediaPlayback> = mutablePlayback.asStateFlow()
         override val sources: StateFlow<List<MediaSource>> = mutableSources.asStateFlow()
         override val queue: StateFlow<List<MediaQueueItem>> = mutableQueue.asStateFlow()
+        override val history: StateFlow<List<MediaHistoryItem>> = mutableHistory.asStateFlow()
 
         private val controllerCallback =
             object : MediaController.Callback() {
@@ -160,6 +164,12 @@ class AndroidMediaRepository
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             runCatching { context.startActivity(intent) }
                 .onFailure { Timber.tag(TAG).w(it, "Unable to open media center") }
+        }
+
+        override fun sendCustomAction(action: MediaCustomAction) {
+            runCatching {
+                controller?.transportControls?.sendCustomAction(action.action, null)
+            }.onFailure { Timber.tag(TAG).w(it, "Unable to send media custom action=%s", action.action) }
         }
 
         private fun activeSessionEvents(): Flow<Unit> =
@@ -275,6 +285,7 @@ class AndroidMediaRepository
                 progressJob?.cancel()
                 mutablePlayback.value = MediaPlayback()
                 mutableQueue.value = emptyList()
+                mutableHistory.value = emptyList()
                 return
             }
             val metadata = active.metadata
@@ -298,7 +309,31 @@ class AndroidMediaRepository
                     canSkipPrevious = actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS != 0L,
                     canSkipNext = actions and PlaybackState.ACTION_SKIP_TO_NEXT != 0L,
                     canSeek = actions and PlaybackState.ACTION_SEEK_TO != 0L,
+                    customActions =
+                        state?.customActions.orEmpty().mapNotNull { action ->
+                            action.action?.takeIf(String::isNotBlank)?.let { actionId ->
+                                MediaCustomAction(
+                                    action = actionId,
+                                    title = action.name?.toString().orEmpty(),
+                                )
+                            }
+                        },
                 )
+            val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
+            if (title.isNotBlank()) {
+                val historyItem =
+                    MediaHistoryItem(
+                        id = "${active.packageName}:$title",
+                        sourcePackage = active.packageName,
+                        sourceLabel = context.applicationLabel(active.packageName),
+                        title = title,
+                        subtitle = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty(),
+                        artwork = mutablePlayback.value.artwork,
+                    )
+                mutableHistory.update { current ->
+                    listOf(historyItem) + current.filterNot { it.id == historyItem.id }
+                }
+            }
             mutableQueue.value =
                 active.queue.orEmpty().map { item ->
                     MediaQueueItem(
